@@ -114,7 +114,7 @@ async def ingest_log(log: LogEvent):
         "status": "received",
         "log_id": f"log_{datetime.now().timestamp()}",
         "message": "Log ingested successfully",
-        "log": log.dict()
+        "log": log.model_dump()
     }
 
 @app.get("/api/v1/threats")
