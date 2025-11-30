@@ -32,12 +32,12 @@ class GCPSecurityCommandCenterIntegration:
                 self.client = securitycenter_v1.SecurityCenterClient()
             
             self.parent = f"organizations/{self._get_organization_id()}"
-            print(f"✓ GCP Security Command Center integration initialized (project: {project_id})")
+            print(f" GCP Security Command Center integration initialized (project: {project_id})")
         except ImportError:
-            print("⚠️  google-cloud-securitycenter not installed. Install with: pip install google-cloud-securitycenter")
+            print("  google-cloud-securitycenter not installed. Install with: pip install google-cloud-securitycenter")
             self.client = None
         except Exception as e:
-            print(f"⚠️  GCP credentials not configured: {e}")
+            print(f"  GCP credentials not configured: {e}")
             self.client = None
     
     def _get_organization_id(self) -> str:

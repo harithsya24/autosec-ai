@@ -30,12 +30,12 @@ class AzureSentinelIntegration:
             self.credential = DefaultAzureCredential()
             self.client = SecurityInsights(self.credential, subscription_id)
             
-            print(f"✓ Azure Sentinel integration initialized (workspace: {workspace_name})")
+            print(f" Azure Sentinel integration initialized (workspace: {workspace_name})")
         except ImportError:
-            print("⚠️  azure-mgmt-securityinsight not installed. Install with: pip install azure-mgmt-securityinsight azure-identity")
+            print("  azure-mgmt-securityinsight not installed. Install with: pip install azure-mgmt-securityinsight azure-identity")
             self.client = None
         except Exception as e:
-            print(f"⚠️  Azure credentials not configured: {e}")
+            print(f"  Azure credentials not configured: {e}")
             self.client = None
     
     def read_security_alerts(

@@ -369,5 +369,5 @@ if __name__ == "__main__":
     print(f"  Requires Approval: {recommendations['summary']['requires_approval']}")
     print(f"  Priority: {recommendations['summary']['recommended_priority']}")
     
-    print("\n✓ Response Agent test complete!")
+    print("\n Response Agent test complete!")
 

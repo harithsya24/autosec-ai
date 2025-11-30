@@ -1,6 +1,6 @@
 # AutoSec AI - Agent System Setup Guide
 
-## 🎯 Overview
+##  Overview
 
 AutoSec AI now includes a complete multi-agent system for threat detection, analysis, and response:
 
@@ -9,15 +9,13 @@ AutoSec AI now includes a complete multi-agent system for threat detection, anal
 3. **Response Agent** - Recommends actions with traffic light system
 4. **Orchestrator Agent** - Coordinates the entire workflow
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### 1. Environment Setup
 
 Create a `.env` file in the project root:
 
 ```bash
-# OpenAI API Key (optional - for LLM reasoning)
-OPENAI_API_KEY=your_key_here
 
 # API Configuration
 API_HOST=0.0.0.0
@@ -84,7 +82,7 @@ Or using uvicorn:
 uvicorn backend.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## 📡 API Endpoints
+##  API Endpoints
 
 ### Analyze Single Log
 
@@ -112,7 +110,7 @@ Content-Type: application/json
 - RAG-powered explanation
 - Confidence score
 - Matched MITRE ATT&CK techniques
-- Recommended actions (🟢/🟡/🔴 tiers)
+- Recommended actions (G/Y/R tiers)
 
 ### Analyze Batch
 
@@ -135,7 +133,7 @@ GET /api/v1/system/status
 
 Returns status of all agents (trained, LLM enabled, etc.)
 
-## 🧠 Agent Details
+##  Agent Details
 
 ### Log Analyzer Agent
 
@@ -188,9 +186,9 @@ analysis = agent.analyze_threat(anomaly)
 **Purpose:** Recommend mitigation actions with risk tiers
 
 **Traffic Light System:**
-- 🟢 **GREEN**: Auto-execute (log, alert, monitor)
-- 🟡 **YELLOW**: Auto-execute + notify (rate-limit, flag)
-- 🔴 **RED**: Require approval (lock account, block IP)
+-  **GREEN**: Auto-execute (log, alert, monitor)
+-  **YELLOW**: Auto-execute + notify (rate-limit, flag)
+-  **RED**: Require approval (lock account, block IP)
 
 **Usage:**
 ```python
@@ -218,7 +216,7 @@ orchestrator = OrchestratorAgent(sandbox_mode=True)
 result = orchestrator.analyze_log(raw_log, return_full_analysis=True)
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### LLM Settings
 
@@ -241,9 +239,9 @@ All actions are logged but not executed in sandbox mode:
 response_agent = ResponseAgent(sandbox_mode=True)
 ```
 
-Set to `False` for production (⚠️ **use with caution**)
+Set to `False` for production ( **use with caution**)
 
-## 📊 Example Workflow
+##  Example Workflow
 
 ```python
 from backend.agents.orchestrator import OrchestratorAgent
@@ -270,12 +268,12 @@ if result["threat_detected"]:
     print(f"Explanation: {result['threat_analysis']['explanation']}")
     
     actions = result["recommended_actions"]["actions"]
-    print(f"\n🟢 Green actions: {len(actions['green'])}")
-    print(f"🟡 Yellow actions: {len(actions['yellow'])}")
-    print(f"🔴 Red actions: {len(actions['red'])}")
+    print(f"\n Green actions: {len(actions['green'])}")
+    print(f" Yellow actions: {len(actions['yellow'])}")
+    print(f" Red actions: {len(actions['red'])}")
 ```
 
-## 🧪 Testing
+##  Testing
 
 ### Test Individual Agents
 
@@ -315,7 +313,7 @@ curl -X POST http://localhost:8000/api/v1/analyze \
   }'
 ```
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### LLM Not Working
 
@@ -345,13 +343,13 @@ curl -X POST http://localhost:8000/api/v1/analyze \
 POST /api/v1/train?sample_size=15000&benign_only=true
 ```
 
-## 📚 Next Steps
+##  Next Steps
 
 1. **Week 3**: Add autonomous mitigation execution
 2. **Week 4**: Build React dashboard
 3. **Production**: Disable sandbox mode and add monitoring
 
-## 🔗 Related Documentation
+##  Related Documentation
 
 - [Architecture Overview](./architecture.md)
 - [Week 1 Progress](./week1_progress.md)

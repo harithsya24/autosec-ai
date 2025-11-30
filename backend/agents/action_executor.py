@@ -35,9 +35,9 @@ class ActionExecutor:
     Executes mitigation actions based on traffic light system
     
     Handles:
-    - 🟢 GREEN: Auto-execute immediately
-    - 🟡 YELLOW: Auto-execute + notify
-    - 🔴 RED: Queue for approval
+    -  GREEN: Auto-execute immediately
+    -  YELLOW: Auto-execute + notify
+    -  RED: Queue for approval
     """
     
     def __init__(self, db: Optional[SecurityLogDatabase] = None, sandbox_mode: bool = True):
@@ -266,7 +266,7 @@ class ActionExecutor:
         }
     
     # ============================================================================
-    # Action Executors (🟢 GREEN Tier)
+    # Action Executors ( GREEN Tier)
     # ============================================================================
     
     def _execute_log_event(self, action: Dict) -> Dict:
@@ -319,7 +319,7 @@ class ActionExecutor:
         return {"message": f"Monitoring increased for {target}", "target": target}
     
     # ============================================================================
-    # Action Executors (🟡 YELLOW Tier)
+    # Action Executors ( YELLOW Tier)
     # ============================================================================
     
     def _execute_rate_limit_ip(self, action: Dict) -> Dict:
@@ -385,7 +385,7 @@ class ActionExecutor:
         return {"message": "Additional auth checks enabled", "duration": duration}
     
     # ============================================================================
-    # Action Executors (🔴 RED Tier)
+    # Action Executors ( RED Tier)
     # ============================================================================
     
     def _execute_lock_account(self, action: Dict) -> Dict:
@@ -815,7 +815,7 @@ if __name__ == "__main__":
         "auto_execute": True
     }
     
-    print("\n🟢 Testing GREEN action...")
+    print("\n Testing GREEN action...")
     result = executor.execute_action(green_action)
     print(f"  Status: {result['status']}")
     print(f"  Message: {result['message']}")
@@ -831,7 +831,7 @@ if __name__ == "__main__":
         "parameters": {"ip": "203.45.67.89"}
     }
     
-    print("\n🟡 Testing YELLOW action...")
+    print("\n Testing YELLOW action...")
     result = executor.execute_action(yellow_action)
     print(f"  Status: {result['status']}")
     print(f"  Message: {result['message']}")
@@ -847,20 +847,20 @@ if __name__ == "__main__":
         "parameters": {"user_id": "user_123"}
     }
     
-    print("\n🔴 Testing RED action (queued)...")
+    print("\n Testing RED action (queued)...")
     result = executor.execute_action(red_action)
     print(f"  Status: {result['status']}")
     print(f"  Requires Approval: {result.get('requires_approval', False)}")
     
     # Test approval
-    print("\n✅ Testing approval...")
+    print("\n Testing approval...")
     approval_result = executor.approve_action("test_red_001", "admin_user", "High confidence threat")
     print(f"  Status: {approval_result['status']}")
     
     # Get pending actions
-    print("\n📋 Pending actions:")
+    print("\n Pending actions:")
     pending = executor.get_pending_actions()
     print(f"  Count: {len(pending)}")
     
-    print("\n✓ Action Executor test complete!")
+    print("\n Action Executor test complete!")
 

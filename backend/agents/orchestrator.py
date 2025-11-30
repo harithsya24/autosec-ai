@@ -308,7 +308,7 @@ class OrchestratorAgent:
 
 if __name__ == "__main__":
     """Test the Orchestrator"""
-    print("🎼 Testing Orchestrator Agent...")
+    print(" Testing Orchestrator Agent...")
     
     # Initialize orchestrator
     orchestrator = OrchestratorAgent(sandbox_mode=True)
