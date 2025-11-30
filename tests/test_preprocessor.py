@@ -1,16 +1,37 @@
-from backend.utils.preprocessor import LogPreprocessor, create_sample_logs
+import pandas as pd
+from backend.utils.preprocessor import LogPreprocessor
 
+# Initialize preprocessor
 preprocessor = LogPreprocessor()
-sample_logs = create_sample_logs()
 
-processed_logs = preprocessor.process_batch(sample_logs)
+# Path to your raw CICIDS CSV files
+cicids_files = [
+    "data/raw/cicids/Friday-WorkingHours-Afternoon-DDos-pcap_ISCX.csv",
+    "data/raw/cicids/Friday-WorkingHours-Afternoon-PortScan-pcap_ISCX.csv",
+    "data/raw/cicids/Friday-WorkingHours-Morning-pcap_ISCX.csv",
+    "data/raw/cicids/Monday-WorkingHours-pcap_ISCX.csv",
+    "data/raw/cicids/Thursday-WorkingHours-Afternoon-Infilteration-pcap_ISCX.csv",
+    "data/raw/cicids/Thursday-WorkingHours-Morning-WebAttacks-pcap_ISCX.csv",
+    "data/raw/cicids/Tuesday-WorkingHours-pcap_ISCX.csv",
+    "data/raw/cicids/Wednesday-workingHours-pcap_ISCX.csv"
+]
 
-for i, log in enumerate(processed_logs, 1):
+# Load and combine all logs
+all_logs = []
+for file in cicids_files:
+    df = pd.read_csv(file)
+    all_logs.extend(df.to_dict(orient='records'))
+
+# Process logs
+processed_logs = preprocessor.process_batch(all_logs)
+
+# Print first 5 processed logs for verification
+for i, log in enumerate(processed_logs[:5], 1):
     print(f"--- Log {i} ---")
-    print(f"User ID (hashed): {log['user_id']}")
-    print(f"Source IP (hashed): {log['source_ip']}")
-    print(f"Destination IP (hashed): {log['destination_ip']}")
-    print(f"Action: {log['action']} | Status: {log['status']}")
-    print(f"Features: {log['features']}")
-    print(f"Processed At: {log['processed_at']}")
+    print(f"User ID (hashed): {log.get('user_id')}")
+    print(f"Source IP (hashed): {log.get('source_ip')}")
+    print(f"Destination IP (hashed): {log.get('destination_ip')}")
+    print(f"Action: {log.get('action')} | Status: {log.get('status')}")
+    print(f"Features: {log.get('features')}")
+    print(f"Processed At: {log.get('processed_at')}")
     print()

@@ -329,7 +329,7 @@ def run_all_tests():
     failed_tests = []
     
     for test_class in test_classes:
-        print(f"\n📋 {test_class.__name__}")
+        print(f"\n {test_class.__name__}")
         print("-" * 40)
         
         instance = test_class()
@@ -357,7 +357,7 @@ def run_all_tests():
         for failure in failed_tests:
             print(f"  - {failure}")
     else:
-        print("\n🎉 ALL TESTS PASSED!")
+        print("\n ALL TESTS PASSED!")
     
     return len(failed_tests) == 0
 
