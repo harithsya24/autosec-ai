@@ -261,7 +261,7 @@ class TestIntegration:
     """Full integration tests"""
     
     def test_complete_workflow(self):
-        """Test complete workflow: logs → preprocessing → RAG → alerts"""
+        """Test complete workflow: logs -> preprocessing -> RAG -> alerts"""
         from backend.utils.database import SecurityLogDatabase, StreamProcessor
         from backend.utils.preprocessor import LogPreprocessor, create_sample_logs
         from rag.vector_store.chroma_setup import (

@@ -175,7 +175,7 @@ class TestIntegration:
     """Integration tests for complete workflows"""
     
     def test_complete_log_flow(self):
-        """Test complete flow: ingest → store → retrieve"""
+        """Test complete flow: ingest -> store -> retrieve"""
         # Step 1: Ingest a log
         log_data = {
             "timestamp": datetime.now().isoformat(),

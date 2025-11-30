@@ -322,7 +322,7 @@ class ResponseAgent:
 
 if __name__ == "__main__":
     """Test the Response Agent"""
-    print("🎯 Testing Response Agent...")
+    print("Testing Response Agent...")
     
     agent = ResponseAgent(sandbox_mode=True)
     
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     
     print(f"\n YELLOW ({len(recommendations['actions']['yellow'])} actions):")
     for action in recommendations['actions']['yellow']:
-        status = "Auto" if action.get('auto_execute') else "⏸ Manual"
+        status = "Auto" if action.get('auto_execute') else "Manual"
         print(f"  {status} {action['description']}")
     
     print(f"\n RED ({len(recommendations['actions']['red'])} actions):")

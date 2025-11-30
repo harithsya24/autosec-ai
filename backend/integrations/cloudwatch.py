@@ -33,9 +33,9 @@ class CloudWatchIntegration:
                 self.logs_client = boto3.client('logs', region_name=region)
                 self.cloudtrail_client = boto3.client('cloudtrail', region_name=region)
             
-            print(f"✓ AWS CloudWatch integration initialized (region: {region})")
+            print(f"AWS CloudWatch integration initialized (region: {region})")
         except Exception as e:
-            print(f"⚠️  AWS credentials not configured: {e}")
+            print(f"WARNING: AWS credentials not configured: {e}")
             self.logs_client = None
             self.cloudtrail_client = None
     

@@ -76,20 +76,20 @@ def process_real_attacks():
     """
     
     print("=" * 70)
-    print("🛡️  AutoSec AI - Real Threat Detection Use Case")
+    print("AutoSec AI - Real Threat Detection Use Case")
     print("=" * 70)
-    print("\n📊 Scenario: Security Operations Center (SOC)")
+    print("\nScenario: Security Operations Center (SOC)")
     print("   Monitoring network traffic for malicious activity")
     print("   Processing real CICIDS 2017 attack dataset\n")
     
     # Initialize components
-    print("🔧 Initializing system...")
+    print("Initializing system...")
     orchestrator = OrchestratorAgent(sandbox_mode=True)
     db = SecurityLogDatabase()
     loader = CICIDSLoader()
     
     # Step 1: Train on benign traffic
-    print("\n📚 Step 1: Training on benign traffic (baseline)...")
+    print("\nStep 1: Training on benign traffic (baseline)...")
     try:
         benign_file = "Monday-WorkingHours-pcap_ISCX.csv"
         print(f"   Loading {benign_file}...")
@@ -103,7 +103,7 @@ def process_real_attacks():
                 break
         
         if label_col is None:
-            print("   ⚠️  Could not find label column, using all data")
+            print("   WARNING: Could not find label column, using all data")
             label_col = 'Label'
             benign_df['Label'] = 'BENIGN'  # Assume all are benign if no label
         
@@ -120,10 +120,10 @@ def process_real_attacks():
         # Train the agent
         print("   Training anomaly detection model...")
         orchestrator.log_analyzer.train_on_benign_only(benign_logs)
-        print("   ✅ Model trained on benign traffic baseline")
+        print("   Model trained on benign traffic baseline")
         
     except Exception as e:
-        print(f"   ⚠️  Training error: {e}")
+        print(f"   WARNING: Training error: {e}")
         print("   Continuing with default model...")
     
     # Step 2: Process attack files
@@ -134,14 +134,14 @@ def process_real_attacks():
         ("Thursday-WorkingHours-Afternoon-Infilteration-pcap_ISCX.csv", "Infiltration Attack"),
     ]
     
-    print("\n🚨 Step 2: Processing real attack traffic...")
+    print("\nStep 2: Processing real attack traffic...")
     print("   Simulating real-time threat detection\n")
     
     total_threats = 0
     threats_by_type = {}
     
     for filename, attack_name in attack_files:
-        print(f"   📁 Processing: {attack_name}")
+        print(f"   Processing: {attack_name}")
         print(f"      File: {filename}")
         
         try:
@@ -156,7 +156,7 @@ def process_real_attacks():
                     break
             
             if label_col is None:
-                print(f"      ⚠️  Could not find label column, assuming all are attacks")
+                print(f"      WARNING: Could not find label column, assuming all are attacks")
                 label_col = 'Label'
                 attack_df['Label'] = 'ATTACK'
             
@@ -164,7 +164,7 @@ def process_real_attacks():
             attack_df = attack_df[attack_df[label_col].astype(str).str.strip() != 'BENIGN']
             
             if len(attack_df) == 0:
-                print(f"      ⚠️  No attack records found, skipping...")
+                print(f"      WARNING: No attack records found, skipping...")
                 continue
             
             print(f"      Found {len(attack_df):,} attack records")
@@ -224,7 +224,7 @@ def process_real_attacks():
                             
                             # Show progress
                             if batch_threats % 10 == 0:
-                                print(f"         ✓ Detected {batch_threats} threats so far...")
+                                print(f"         Detected {batch_threats} threats so far...")
                         
                         processed += 1
                         
@@ -233,34 +233,34 @@ def process_real_attacks():
                             time.sleep(0.1)
                             
                     except Exception as e:
-                        print(f"         ⚠️  Error processing record: {e}")
+                        print(f"         WARNING: Error processing record: {e}")
                         continue
                 
-                print(f"      ✅ Processed {processed} records, detected {batch_threats} threats")
+                print(f"      Processed {processed} records, detected {batch_threats} threats")
             
         except FileNotFoundError:
-            print(f"      ❌ File not found: {filename}")
+            print(f"      ERROR: File not found: {filename}")
         except Exception as e:
-            print(f"      ❌ Error processing {filename}: {e}")
+            print(f"      ERROR: Error processing {filename}: {e}")
             import traceback
             traceback.print_exc()
     
     # Summary
     print("\n" + "=" * 70)
-    print("📊 DETECTION SUMMARY")
+    print("DETECTION SUMMARY")
     print("=" * 70)
-    print(f"✅ Total threats detected: {total_threats}")
-    print(f"📁 Threats stored in database: {total_threats}")
-    print(f"\n📈 Threats by type:")
+    print(f"Total threats detected: {total_threats}")
+    print(f"Threats stored in database: {total_threats}")
+    print(f"\nThreats by type:")
     for threat_type, count in sorted(threats_by_type.items(), key=lambda x: x[1], reverse=True):
-        print(f"   • {threat_type}: {count}")
+        print(f"   - {threat_type}: {count}")
     
-    print(f"\n🌐 View threats in dashboard:")
+    print(f"\nView threats in dashboard:")
     print(f"   http://localhost:3000")
-    print(f"\n📡 API endpoint:")
+    print(f"\nAPI endpoint:")
     print(f"   GET http://localhost:8000/api/v1/threats")
     print("\n" + "=" * 70)
-    print("✅ Real threat detection complete!")
+    print("Real threat detection complete!")
     print("=" * 70)
 
 if __name__ == "__main__":

@@ -70,7 +70,7 @@ class ThreatIntelligenceAgent:
                         temperature=temperature,
                         api_key=api_key
                     )
-                    print(f"✓ LLM initialized: {llm_model}")
+                    print(f"LLM initialized: {llm_model}")
                 except Exception as e:
                     print(f"  Failed to initialize LLM: {e}")
                     self.use_llm = False
@@ -496,7 +496,7 @@ if __name__ == "__main__":
         rag.add_threat_documents(create_sample_threat_documents())
         rag.add_cve_documents(create_sample_cve_documents())
         rag.add_incident_reports(create_sample_incident_reports())
-        print(f"✓ Loaded: {rag.get_collection_stats()}")
+        print(f"Loaded: {rag.get_collection_stats()}")
     
     # Initialize agent
     agent = ThreatIntelligenceAgent(rag=rag, use_llm=False)  # Test without LLM first
@@ -530,5 +530,5 @@ if __name__ == "__main__":
         print(f"    {i}. {rec}")
     print(f"\n  Citations: {len(analysis['citations'])} sources")
     
-    print("\n✓ Threat Intelligence Agent test complete!")
+    print("\nThreat Intelligence Agent test complete!")
 

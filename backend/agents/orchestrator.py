@@ -1,6 +1,6 @@
 """
 Orchestrator Agent
-Coordinates the workflow: Detection → RAG → LLM → Response
+Coordinates the workflow: Detection -> RAG -> LLM -> Response
 """
 
 from typing import Dict, List, Optional
@@ -316,9 +316,9 @@ if __name__ == "__main__":
     # Check status
     status = orchestrator.get_system_status()
     print(f"\n System Status:")
-    print(f"  Log Analyzer: {' Trained' if status['log_analyzer']['trained'] else '✗ Not Trained'}")
-    print(f"  Threat Intel: RAG={'Yes' if status['threat_intelligence']['rag_available'] else '✗'}, "
-          f"LLM={'Yes' if status['threat_intelligence']['llm_enabled'] else '✗'}")
+    print(f"  Log Analyzer: {'Trained' if status['log_analyzer']['trained'] else 'Not Trained'}")
+    print(f"  Threat Intel: RAG={'Yes' if status['threat_intelligence']['rag_available'] else 'No'}, "
+          f"LLM={'Yes' if status['threat_intelligence']['llm_enabled'] else 'No'}")
     print(f"  Sandbox Mode: {'ON' if status['response_agent']['sandbox_mode'] else 'OFF'}")
     
     if not status['log_analyzer']['trained']:

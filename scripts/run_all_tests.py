@@ -23,7 +23,7 @@ def run_week1():
         tester = TestWeek1()
         return tester.run_all_tests()
     except Exception as e:
-        print(f"\n❌ Error running Week 1 tests: {e}")
+        print(f"\nERROR: Error running Week 1 tests: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -40,7 +40,7 @@ def run_week2():
         tester = TestWeek2()
         return tester.run_all_tests()
     except Exception as e:
-        print(f"\n❌ Error running Week 2 tests: {e}")
+        print(f"\nERROR: Error running Week 2 tests: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -57,7 +57,7 @@ def run_week3():
         tester = TestWeek3Integration()
         return tester.run_all_tests()
     except Exception as e:
-        print(f"\n❌ Error running Week 3 tests: {e}")
+        print(f"\nERROR: Error running Week 3 tests: {e}")
         import traceback
         traceback.print_exc()
         return False
@@ -74,29 +74,29 @@ def main():
     results = {}
     
     # Run Week 1
-    print("\n" + "▶"*35)
+    print("\n" + "="*35)
     results['week1'] = run_week1()
     
     # Ask before continuing
     if not results['week1']:
-        response = input("\n⚠️  Week 1 tests failed. Continue to Week 2? (y/n): ")
+        response = input("\nWARNING: Week 1 tests failed. Continue to Week 2? (y/n): ")
         if response.lower() != 'y':
-            print("\n❌ Stopping tests.")
+            print("\nStopping tests.")
             return False
     
     # Run Week 2
-    print("\n" + "▶"*35)
+    print("\n" + "="*35)
     results['week2'] = run_week2()
     
     # Ask before continuing
     if not results['week2']:
-        response = input("\n⚠️  Week 2 tests failed. Continue to Week 3? (y/n): ")
+        response = input("\nWARNING: Week 2 tests failed. Continue to Week 3? (y/n): ")
         if response.lower() != 'y':
-            print("\n❌ Stopping tests.")
+            print("\nStopping tests.")
             return False
     
     # Run Week 3
-    print("\n" + "▶"*35)
+    print("\n" + "="*35)
     results['week3'] = run_week3()
     
     # Final summary
@@ -105,18 +105,18 @@ def main():
     print("="*70)
     
     for week, passed in results.items():
-        status = "✅ PASS" if passed else "✗ FAIL"
+        status = "PASS" if passed else "FAIL"
         print(f"  {status} - {week.upper()}")
     
     all_passed = all(results.values())
     passed_count = sum(1 for v in results.values() if v)
     
-    print(f"\n📊 Results: {passed_count}/3 weeks passed")
+    print(f"\nResults: {passed_count}/3 weeks passed")
     
     if all_passed:
-        print("\n🎉 All tests passed across all weeks!")
+        print("\nAll tests passed across all weeks!")
     else:
-        print(f"\n⚠️  {3 - passed_count} week(s) had failures")
+        print(f"\nWARNING: {3 - passed_count} week(s) had failures")
     
     return all_passed
 

@@ -23,12 +23,12 @@ class TestWeek2:
     def print_header(self, test_name):
         """Print test header"""
         print(f"\n{'='*60}")
-        print(f"🧪 {test_name}")
+        print(f"{test_name}")
         print(f"{'='*60}")
     
     def test_result(self, test_name, passed, message=""):
         """Record test result"""
-        status = "✓ PASS" if passed else "✗ FAIL"
+        status = "PASS" if passed else "FAIL"
         print(f"  {status} - {test_name}")
         if message:
             print(f"    {message}")
@@ -348,7 +348,7 @@ class TestWeek2:
     def run_all_tests(self):
         """Run all Week 2 tests"""
         print("="*60)
-        print("🧪 WEEK 2 AI AGENTS TESTS")
+        print("WEEK 2 AI AGENTS TESTS")
         print("="*60)
         print("\nTesting: Detection, RAG Analysis, Recommendations, Orchestration")
         
@@ -360,11 +360,11 @@ class TestWeek2:
         
         # Print summary
         print("\n" + "="*60)
-        print("📊 WEEK 2 TEST SUMMARY")
+        print("WEEK 2 TEST SUMMARY")
         print("="*60)
         
         for test_name, passed, message in self.test_results:
-            status = "✓ PASS" if passed else "✗ FAIL"
+            status = "PASS" if passed else "FAIL"
             print(f"  {status} - {test_name}")
             if message and not passed:
                 print(f"      {message}")
@@ -372,14 +372,14 @@ class TestWeek2:
         total = self.passed + self.failed
         percentage = (self.passed / total * 100) if total > 0 else 0
         
-        print(f"\n✅ Passed: {self.passed}")
-        print(f"✗ Failed: {self.failed}")
-        print(f"📊 Total: {total} ({percentage:.0f}%)")
+        print(f"\nPassed: {self.passed}")
+        print(f"Failed: {self.failed}")
+        print(f"Total: {total} ({percentage:.0f}%)")
         
         if self.failed == 0:
-            print("\n🎉 All Week 2 tests passed!")
+            print("\nAll Week 2 tests passed!")
         else:
-            print(f"\n⚠️  {self.failed} test(s) failed")
+            print(f"\nWARNING: {self.failed} test(s) failed")
         
         return self.failed == 0
 

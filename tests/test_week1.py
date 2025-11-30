@@ -24,12 +24,12 @@ class TestWeek1:
     def print_header(self, test_name):
         """Print test header"""
         print(f"\n{'='*60}")
-        print(f"🧪 {test_name}")
+        print(f"{test_name}")
         print(f"{'='*60}")
     
     def test_result(self, test_name, passed, message=""):
         """Record test result"""
-        status = "✓ PASS" if passed else "✗ FAIL"
+        status = "PASS" if passed else "FAIL"
         print(f"  {status} - {test_name}")
         if message:
             print(f"    {message}")
@@ -118,10 +118,10 @@ class TestWeek1:
             ip_anon = anonymized["source_ip"] != test_log["source_ip"]
             user_anon = anonymized["user_id"] != test_log["user_id"]
             
-            self.test_result("IP Anonymization", ip_anon, 
-                           f"Original: {test_log['source_ip']} → Anonymized: {anonymized['source_ip']}")
+            self.test_result("IP Anonymization", ip_anon,
+                           f"Original: {test_log['source_ip']} -> Anonymized: {anonymized['source_ip']}")
             self.test_result("User Anonymization", user_anon,
-                           f"Original: {test_log['user_id']} → Anonymized: {anonymized['user_id']}")
+                           f"Original: {test_log['user_id']} -> Anonymized: {anonymized['user_id']}")
             
             # Test normalization
             print("  Testing log normalization...")
@@ -343,7 +343,7 @@ class TestWeek1:
     def run_all_tests(self):
         """Run all Week 1 tests"""
         print("="*60)
-        print("🧪 WEEK 1 FOUNDATION TESTS")
+        print("WEEK 1 FOUNDATION TESTS")
         print("="*60)
         print("\nTesting: Data Pipeline, RAG, Database, Schema")
         
@@ -356,11 +356,11 @@ class TestWeek1:
         
         # Print summary
         print("\n" + "="*60)
-        print("📊 WEEK 1 TEST SUMMARY")
+        print("WEEK 1 TEST SUMMARY")
         print("="*60)
         
         for test_name, passed, message in self.test_results:
-            status = "✓ PASS" if passed else "✗ FAIL"
+            status = "PASS" if passed else "FAIL"
             print(f"  {status} - {test_name}")
             if message and not passed:
                 print(f"      {message}")
@@ -368,14 +368,14 @@ class TestWeek1:
         total = self.passed + self.failed
         percentage = (self.passed / total * 100) if total > 0 else 0
         
-        print(f"\n✅ Passed: {self.passed}")
-        print(f"✗ Failed: {self.failed}")
-        print(f"📊 Total: {total} ({percentage:.0f}%)")
+        print(f"\nPassed: {self.passed}")
+        print(f"Failed: {self.failed}")
+        print(f"Total: {total} ({percentage:.0f}%)")
         
         if self.failed == 0:
-            print("\n🎉 All Week 1 tests passed!")
+            print("\nAll Week 1 tests passed!")
         else:
-            print(f"\n⚠️  {self.failed} test(s) failed")
+            print(f"\nWARNING: {self.failed} test(s) failed")
         
         return self.failed == 0
 

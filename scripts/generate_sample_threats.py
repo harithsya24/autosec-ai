@@ -14,11 +14,11 @@ import random
 def generate_sample_threats():
     """Generate sample threats for dashboard testing"""
     
-    print("🔧 Setting up orchestrator...")
+    print("Setting up orchestrator...")
     orchestrator = OrchestratorAgent(sandbox_mode=True)
     
     # Train the agent first
-    print("📚 Training agent on sample data...")
+    print("Training agent on sample data...")
     try:
         import pandas as pd
         data_dir = Path(__file__).parent.parent / "data" / "raw" / "cicids"
@@ -28,11 +28,11 @@ def generate_sample_threats():
             df = pd.read_csv(file_path, nrows=5000)
             all_logs = df.to_dict('records')
             orchestrator.log_analyzer.train_on_benign_only(all_logs)
-            print("✅ Agent trained")
+            print("Agent trained")
         else:
-            print("⚠️  Training file not found, using default model")
+            print("WARNING: Training file not found, using default model")
     except Exception as e:
-        print(f"⚠️  Training error: {e}")
+        print(f"WARNING: Training error: {e}")
     
     # Sample suspicious logs
     sample_logs = [
@@ -113,7 +113,7 @@ def generate_sample_threats():
         }
     ]
     
-    print(f"\n🚨 Generating {len(sample_logs)} sample threats...")
+    print(f"\nGenerating {len(sample_logs)} sample threats...")
     
     db = SecurityLogDatabase()
     threats_created = 0
@@ -145,14 +145,14 @@ def generate_sample_threats():
                 
                 db.insert_threat(threat_data)
                 threats_created += 1
-                print(f"    ✅ Threat created: {alert_id}")
+                print(f"    Threat created: {alert_id}")
             else:
-                print(f"    ⚠️  No threat detected for log {i}")
+                print(f"    WARNING: No threat detected for log {i}")
         except Exception as e:
-            print(f"    ❌ Error processing log {i}: {e}")
+            print(f"    ERROR: Error processing log {i}: {e}")
     
-    print(f"\n✅ Generated {threats_created} threats in database")
-    print(f"📊 View them at: http://localhost:3000")
+    print(f"\nGenerated {threats_created} threats in database")
+    print(f"View them at: http://localhost:3000")
 
 if __name__ == "__main__":
     generate_sample_threats()

@@ -202,7 +202,7 @@ async def train_agent(
                 "Wednesday-workingHours-pcap_ISCX.csv"
             ]
             
-            print(f"📂 Loading from {len(csv_files)} CICIDS files...")
+            print(f"Loading from {len(csv_files)} CICIDS files...")
             per_file_samples = sample_size // len(csv_files)
             
             for csv_file in csv_files:

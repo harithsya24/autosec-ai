@@ -802,7 +802,7 @@ class ActionExecutor:
 
 if __name__ == "__main__":
     """Test the Action Executor"""
-    print("⚡ Testing Action Executor...")
+    print("Testing Action Executor...")
     
     executor = ActionExecutor(sandbox_mode=True)
     

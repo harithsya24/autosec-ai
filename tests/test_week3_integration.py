@@ -28,7 +28,7 @@ class TestWeek3Integration:
     
     def setup(self):
         """Set up test environment"""
-        print("🔧 Setting up test environment...")
+        print("Setting up test environment...")
         
         # Initialize orchestrator
         self.orchestrator = OrchestratorAgent(sandbox_mode=True)
@@ -41,16 +41,16 @@ class TestWeek3Integration:
                 df = loader.load_file("Monday-WorkingHours-pcap_ISCX.csv", sample_size=5000)
                 logs = df.to_dict('records')
                 self.orchestrator.log_analyzer.train_on_benign_only(logs)
-                print("  ✓ Log analyzer trained")
+                print("  Log analyzer trained")
             except Exception as e:
-                print(f"  ⚠️  Could not train: {e}")
-                print("  ⚠️  Some tests may fail")
+                print(f"  WARNING: Could not train: {e}")
+                print("  WARNING: Some tests may fail")
         
-        print("  ✓ Test environment ready\n")
+        print("  Test environment ready\n")
     
     def test_green_action_execution(self):
         """Test that green actions are executed automatically"""
-        print("🧪 Test 1: Green Action Execution")
+        print("Test 1: Green Action Execution")
         
         try:
             # Create a suspicious log
@@ -85,29 +85,29 @@ class TestWeek3Integration:
             if executed:
                 green_actions = [a for a in executed if a.get("tier") == "green" or "log" in a.get("action_id", "")]
                 if green_actions:
-                    print("  ✓ Green actions executed automatically")
+                    print("  PASS: Green actions executed automatically")
                     self.test_results.append(("Green Action Execution", True))
                     return True
                 else:
-                    print("  ⚠️  Actions executed but none are green tier")
+                    print("  WARNING: Actions executed but none are green tier")
                     self.test_results.append(("Green Action Execution", False))
                     return False
             else:
                 if result.get("threat_detected"):
-                    print("  ⚠️  Threat detected but no actions executed")
+                    print("  WARNING: Threat detected but no actions executed")
                 else:
-                    print("  ℹ️  No threat detected (expected for benign log)")
+                    print("  INFO: No threat detected (expected for benign log)")
                 self.test_results.append(("Green Action Execution", True))  # Not a failure
                 return True
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             self.test_results.append(("Green Action Execution", False))
             return False
     
     def test_red_action_approval(self):
         """Test that red actions require approval"""
-        print("\n🧪 Test 2: Red Action Approval Workflow")
+        print("\nTest 2: Red Action Approval Workflow")
         
         try:
             executor = self.orchestrator.action_executor
@@ -127,14 +127,14 @@ class TestWeek3Integration:
             result = executor.execute_action(red_action)
             
             if result.get("status") == ActionStatus.PENDING:
-                print("  ✓ Red action queued for approval")
+                print("  PASS: Red action queued for approval")
                 
                 # Check pending actions
                 pending = executor.get_pending_actions()
                 action_ids = [a["action_id"] for a in pending]
                 
                 if red_action["id"] in action_ids:
-                    print("  ✓ Red action appears in pending list")
+                    print("  PASS: Red action appears in pending list")
                     
                     # Test approval
                     approval_result = executor.approve_action(
@@ -144,24 +144,24 @@ class TestWeek3Integration:
                     )
                     
                     if approval_result.get("status") == "approved":
-                        print("  ✓ Action approved and executed")
+                        print("  PASS: Action approved and executed")
                         self.test_results.append(("Red Action Approval", True))
                         return True
                     else:
-                        print(f"  ⚠️  Approval returned: {approval_result.get('status')}")
+                        print(f"  WARNING: Approval returned: {approval_result.get('status')}")
                         self.test_results.append(("Red Action Approval", False))
                         return False
                 else:
-                    print("  ❌ Action not found in pending list")
+                    print("  ERROR: Action not found in pending list")
                     self.test_results.append(("Red Action Approval", False))
                     return False
             else:
-                print(f"  ❌ Action not queued, status: {result.get('status')}")
+                print(f"  ERROR: Action not queued, status: {result.get('status')}")
                 self.test_results.append(("Red Action Approval", False))
                 return False
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             import traceback
             traceback.print_exc()
             self.test_results.append(("Red Action Approval", False))
@@ -169,7 +169,7 @@ class TestWeek3Integration:
     
     def test_action_rollback(self):
         """Test action rollback functionality"""
-        print("\n🧪 Test 3: Action Rollback")
+        print("\nTest 3: Action Rollback")
         
         try:
             executor = self.orchestrator.action_executor
@@ -189,7 +189,7 @@ class TestWeek3Integration:
             result = executor.execute_action(yellow_action)
             
             if result.get("status") == ActionStatus.COMPLETED:
-                print("  ✓ Action executed successfully")
+                print("  PASS: Action executed successfully")
                 
                 # Rollback action
                 rollback_result = executor.rollback_action(
@@ -198,21 +198,21 @@ class TestWeek3Integration:
                 )
                 
                 if rollback_result.get("status") == "success":
-                    print("  ✓ Action rolled back successfully")
+                    print("  PASS: Action rolled back successfully")
                     self.test_results.append(("Action Rollback", True))
                     return True
                 else:
-                    print(f"  ⚠️  Rollback status: {rollback_result.get('status')}")
+                    print(f"  WARNING: Rollback status: {rollback_result.get('status')}")
                     print(f"  Message: {rollback_result.get('message')}")
                     self.test_results.append(("Action Rollback", False))
                     return False
             else:
-                print(f"  ⚠️  Action not completed, status: {result.get('status')}")
+                print(f"  WARNING: Action not completed, status: {result.get('status')}")
                 self.test_results.append(("Action Rollback", True))  # Not a failure
                 return True
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             import traceback
             traceback.print_exc()
             self.test_results.append(("Action Rollback", False))
@@ -220,7 +220,7 @@ class TestWeek3Integration:
     
     def test_action_history(self):
         """Test action history tracking"""
-        print("\n🧪 Test 4: Action History Tracking")
+        print("\nTest 4: Action History Tracking")
         
         try:
             executor = self.orchestrator.action_executor
@@ -240,31 +240,31 @@ class TestWeek3Integration:
             history = executor.get_action_history(limit=10)
             
             if len(history) > 0:
-                print(f"  ✓ Action history retrieved ({len(history)} actions)")
+                print(f"  PASS: Action history retrieved ({len(history)} actions)")
                 
                 # Check if our test actions are in history
                 test_actions = [a for a in history if "test_history" in a.get("action_id", "")]
                 if len(test_actions) >= 3:
-                    print("  ✓ Test actions found in history")
+                    print("  PASS: Test actions found in history")
                     self.test_results.append(("Action History", True))
                     return True
                 else:
-                    print(f"  ⚠️  Only {len(test_actions)}/3 test actions found")
+                    print(f"  WARNING: Only {len(test_actions)}/3 test actions found")
                     self.test_results.append(("Action History", True))  # Partial success
                     return True
             else:
-                print("  ⚠️  No action history found")
+                print("  WARNING: No action history found")
                 self.test_results.append(("Action History", False))
                 return False
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             self.test_results.append(("Action History", False))
             return False
     
     def test_enhanced_confidence(self):
         """Test enhanced confidence scoring"""
-        print("\n🧪 Test 5: Enhanced Confidence Scoring")
+        print("\nTest 5: Enhanced Confidence Scoring")
         
         try:
             # Create anomaly with high anomaly score
@@ -285,23 +285,23 @@ class TestWeek3Integration:
             
             # Enhanced confidence should be higher with strong anomaly score
             if confidence > 0.5:
-                print(f"  ✓ Enhanced confidence calculated: {confidence:.2%}")
-                print("  ✓ Confidence considers anomaly score strength")
+                print(f"  PASS: Enhanced confidence calculated: {confidence:.2%}")
+                print("  PASS: Confidence considers anomaly score strength")
                 self.test_results.append(("Enhanced Confidence", True))
                 return True
             else:
-                print(f"  ⚠️  Confidence seems low: {confidence:.2%}")
+                print(f"  WARNING: Confidence seems low: {confidence:.2%}")
                 self.test_results.append(("Enhanced Confidence", True))  # Still passes
                 return True
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             self.test_results.append(("Enhanced Confidence", False))
             return False
     
     def test_end_to_end_workflow(self):
         """Test complete end-to-end workflow"""
-        print("\n🧪 Test 6: End-to-End Workflow")
+        print("\nTest 6: End-to-End Workflow")
         
         try:
             # Create highly suspicious log that should trigger detection
@@ -336,8 +336,8 @@ class TestWeek3Integration:
             
             if not threat_detected:
                 # If no threat detected, that's okay - test the structure anyway
-                print("  ℹ️  No threat detected with test log")
-                print("  ✓ Workflow structure is correct")
+                print("  INFO: No threat detected with test log")
+                print("  PASS: Workflow structure is correct")
                 # Check that the response has the expected structure
                 has_status = "status" in result
                 has_analyzed_at = "analyzed_at" in result
@@ -361,13 +361,13 @@ class TestWeek3Integration:
             
             print("  Workflow Components:")
             for component, passed in checks.items():
-                status = "✓" if passed else "✗"
+                status = "PASS" if passed else "FAIL"
                 print(f"    {status} {component}")
                 if not passed:
                     print(f"      Missing: {component}")
             
             if all_passed:
-                print("  ✓ Complete workflow functional")
+                print("  PASS: Complete workflow functional")
                 self.test_results.append(("End-to-End Workflow", True))
                 return True
             else:
@@ -384,17 +384,17 @@ class TestWeek3Integration:
                 )
                 
                 if basic_working:
-                    print("  ✓ Basic workflow structure is correct")
-                    print("  ℹ️  Some optional fields may be empty (this is acceptable)")
+                    print("  PASS: Basic workflow structure is correct")
+                    print("  INFO: Some optional fields may be empty (this is acceptable)")
                     self.test_results.append(("End-to-End Workflow", True))
                     return True
                 else:
-                    print("  ⚠️  Some workflow components missing")
+                    print("  WARNING: Some workflow components missing")
                     self.test_results.append(("End-to-End Workflow", False))
                     return False
                 
         except Exception as e:
-            print(f"  ❌ Test failed: {e}")
+            print(f"  ERROR: Test failed: {e}")
             import traceback
             traceback.print_exc()
             self.test_results.append(("End-to-End Workflow", False))
@@ -403,7 +403,7 @@ class TestWeek3Integration:
     def run_all_tests(self):
         """Run all integration tests"""
         print("=" * 60)
-        print("🧪 WEEK 3 ACTION EXECUTION TESTS")
+        print("WEEK 3 ACTION EXECUTION TESTS")
         print("=" * 60)
         print("\nTesting: Action Execution, Approval Workflow, Rollback, History")
         
@@ -419,22 +419,22 @@ class TestWeek3Integration:
         
         # Print summary
         print("\n" + "=" * 60)
-        print("📊 WEEK 3 TEST SUMMARY")
+        print("WEEK 3 TEST SUMMARY")
         print("=" * 60)
         
         passed = sum(1 for _, result in self.test_results if result)
         total = len(self.test_results)
         
         for test_name, result in self.test_results:
-            status = "✓ PASS" if result else "✗ FAIL"
+            status = "PASS" if result else "FAIL"
             print(f"  {status} - {test_name}")
         
-        print(f"\n✅ {passed}/{total} tests passed ({passed/total*100:.0f}%)")
+        print(f"\n{passed}/{total} tests passed ({passed/total*100:.0f}%)")
         
         if passed == total:
-            print("\n🎉 All tests passed!")
+            print("\nAll tests passed!")
         else:
-            print(f"\n⚠️  {total - passed} test(s) failed")
+            print(f"\nWARNING: {total - passed} test(s) failed")
         
         return passed == total
 

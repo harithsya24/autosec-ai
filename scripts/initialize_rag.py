@@ -25,7 +25,7 @@ def main():
     print("=" * 60)
     
     # Initialize RAG
-    print("\n📚 Creating vector store...")
+    print("\nCreating vector store...")
     rag = ThreatIntelligenceRAG()
     
     # Check current stats
@@ -42,7 +42,7 @@ def main():
         rag.add_threat_documents(threat_docs)
         print(f"   Added {len(threat_docs)} threat documents")
     else:
-        print("\n✓ Threat intelligence already loaded")
+        print("\nThreat intelligence already loaded")
     
     if stats['cves'] == 0:
         print("\n Loading sample CVE data...")
@@ -50,7 +50,7 @@ def main():
         rag.add_cve_documents(cve_docs)
         print(f"   Added {len(cve_docs)} CVE documents")
     else:
-        print("\n✓ CVE data already loaded")
+        print("\nCVE data already loaded")
     
     if stats['incidents'] == 0:
         print("\n Loading sample incident reports...")
@@ -58,7 +58,7 @@ def main():
         rag.add_incident_reports(incident_docs)
         print(f"   Added {len(incident_docs)} incident reports")
     else:
-        print("\n✓ Incident reports already loaded")
+        print("\nIncident reports already loaded")
     
     # Final stats
     final_stats = rag.get_collection_stats()

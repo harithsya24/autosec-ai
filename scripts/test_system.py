@@ -13,7 +13,7 @@ sys.path.append(str(project_root))
 
 def test_rag_system():
     """Test RAG system initialization"""
-    print("📚 Testing RAG System...")
+    print("Testing RAG System...")
     try:
         from rag.vector_store.chroma_setup import ThreatIntelligenceRAG
         
@@ -84,7 +84,7 @@ def test_agents():
 
 def test_orchestrator():
     """Test orchestrator (requires trained model)"""
-    print("\n🎼 Testing Orchestrator...")
+    print("\nTesting Orchestrator...")
     
     try:
         from backend.agents.orchestrator import OrchestratorAgent
@@ -97,8 +97,8 @@ def test_orchestrator():
             return False
         
         print(f"   Log Analyzer: Trained")
-        print(f"   Threat Intel: RAG={'✓' if status['threat_intelligence']['rag_available'] else '✗'}, "
-              f"LLM={'Y' if status['threat_intelligence']['llm_enabled'] else '✗'}")
+        print(f"   Threat Intel: RAG={'YES' if status['threat_intelligence']['rag_available'] else 'NO'}, "
+              f"LLM={'YES' if status['threat_intelligence']['llm_enabled'] else 'NO'}")
         print(f"   Response Agent: Sandbox mode")
         return True
     except Exception as e:
@@ -158,7 +158,7 @@ def main():
     print("\n" + "=" * 60)
     print(" Test Results:")
     for test_name, passed in results.items():
-        status = " PASS" if passed else "✗ FAIL / ⚠️  SKIP"
+        status = "PASS" if passed else "FAIL / SKIP"
         print(f"  {test_name}: {status}")
     
     passed_count = sum(1 for v in results.values() if v)
