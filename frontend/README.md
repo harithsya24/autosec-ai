@@ -116,3 +116,4 @@ The dashboard connects to the FastAPI backend:
 - Safari (latest)
 - Edge (latest)
 
+

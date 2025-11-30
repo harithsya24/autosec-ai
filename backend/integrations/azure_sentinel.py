@@ -119,3 +119,4 @@ if __name__ == "__main__":
         alerts = azure.read_security_alerts(max_results=10)
         print(f"Retrieved {len(alerts)} security alerts")
 
+

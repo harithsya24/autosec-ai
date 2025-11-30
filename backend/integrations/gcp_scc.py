@@ -121,3 +121,4 @@ if __name__ == "__main__":
         findings = gcp.read_security_findings(max_results=10)
         print(f"Retrieved {len(findings)} security findings")
 
+

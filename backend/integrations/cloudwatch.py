@@ -177,3 +177,4 @@ if __name__ == "__main__":
         events = cw.read_cloudtrail_events(max_results=10)
         print(f"Retrieved {len(events)} CloudTrail events")
 
+
