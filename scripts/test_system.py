@@ -21,20 +21,20 @@ def test_rag_system():
         stats = rag.get_collection_stats()
         
         if stats['threats'] == 0:
-            print("  ⚠️  RAG not initialized. Run: python scripts/initialize_rag.py")
+            print("    RAG not initialized. Run: python scripts/initialize_rag.py")
             return False
         
-        print(f"  ✓ Threats: {stats['threats']}")
-        print(f"  ✓ CVEs: {stats['cves']}")
-        print(f"  ✓ Incidents: {stats['incidents']}")
+        print(f"   Threats: {stats['threats']}")
+        print(f"   CVEs: {stats['cves']}")
+        print(f"   Incidents: {stats['incidents']}")
         return True
     except Exception as e:
-        print(f"  ❌ Error: {e}")
+        print(f"   Error: {e}")
         return False
 
 def test_agents():
     """Test individual agents"""
-    print("\n🤖 Testing Agents...")
+    print("\n Testing Agents...")
     
     results = {}
     
@@ -56,9 +56,9 @@ def test_agents():
         
         analysis = agent.analyze_threat(sample_anomaly)
         results['threat_intel'] = analysis.get('confidence', 0) > 0
-        print(f"  ✓ Threat Intelligence Agent: {analysis.get('threat_type', 'unknown')}")
+        print(f"   Threat Intelligence Agent: {analysis.get('threat_type', 'unknown')}")
     except Exception as e:
-        print(f"  ❌ Threat Intelligence Agent: {e}")
+        print(f"   Threat Intelligence Agent: {e}")
         results['threat_intel'] = False
     
     # Test Response Agent
@@ -75,9 +75,9 @@ def test_agents():
         
         recommendations = agent.recommend_actions(threat_analysis, anomaly)
         results['response'] = recommendations['summary']['total_actions'] > 0
-        print(f"  ✓ Response Agent: {recommendations['summary']['total_actions']} actions recommended")
+        print(f"   Response Agent: {recommendations['summary']['total_actions']} actions recommended")
     except Exception as e:
-        print(f"  ❌ Response Agent: {e}")
+        print(f"   Response Agent: {e}")
         results['response'] = False
     
     return all(results.values())
@@ -93,21 +93,21 @@ def test_orchestrator():
         status = orchestrator.get_system_status()
         
         if not status['log_analyzer']['trained']:
-            print("  ⚠️  Log Analyzer not trained. Run: POST /api/v1/train")
+            print("    Log Analyzer not trained. Run: POST /api/v1/train")
             return False
         
-        print(f"  ✓ Log Analyzer: Trained")
-        print(f"  ✓ Threat Intel: RAG={'✓' if status['threat_intelligence']['rag_available'] else '✗'}, "
-              f"LLM={'✓' if status['threat_intelligence']['llm_enabled'] else '✗'}")
-        print(f"  ✓ Response Agent: Sandbox mode")
+        print(f"   Log Analyzer: Trained")
+        print(f"   Threat Intel: RAG={'✓' if status['threat_intelligence']['rag_available'] else '✗'}, "
+              f"LLM={'Y' if status['threat_intelligence']['llm_enabled'] else '✗'}")
+        print(f"   Response Agent: Sandbox mode")
         return True
     except Exception as e:
-        print(f"  ❌ Error: {e}")
+        print(f"   Error: {e}")
         return False
 
 def test_api_endpoints():
     """Test API endpoints (if server is running)"""
-    print("\n🌐 Testing API Endpoints...")
+    print("\n Testing API Endpoints...")
     
     try:
         import requests
@@ -118,34 +118,34 @@ def test_api_endpoints():
         try:
             response = requests.get(f"{base_url}/health", timeout=2)
             if response.status_code == 200:
-                print("  ✓ Health endpoint: OK")
+                print("   Health endpoint: OK")
             else:
-                print(f"  ⚠️  Health endpoint: {response.status_code}")
+                print(f"    Health endpoint: {response.status_code}")
                 return False
         except requests.exceptions.ConnectionError:
-            print("  ⚠️  API server not running. Start with: python backend/api/main.py")
+            print("    API server not running. Start with: python backend/api/main.py")
             return False
         
         # System status
         try:
             response = requests.get(f"{base_url}/api/v1/system/status", timeout=2)
             if response.status_code == 200:
-                print("  ✓ System status endpoint: OK")
+                print("   System status endpoint: OK")
                 return True
             else:
-                print(f"  ⚠️  System status: {response.status_code}")
+                print(f"    System status: {response.status_code}")
                 return False
         except Exception as e:
-            print(f"  ⚠️  System status: {e}")
+            print(f"    System status: {e}")
             return False
             
     except ImportError:
-        print("  ⚠️  'requests' not installed. Install with: pip install requests")
+        print("    'requests' not installed. Install with: pip install requests")
         return False
 
 def main():
     """Run all tests"""
-    print("🧪 AutoSec AI - System Test")
+    print(" AutoSec AI - System Test")
     print("=" * 60)
     
     results = {
@@ -156,20 +156,20 @@ def main():
     }
     
     print("\n" + "=" * 60)
-    print("📊 Test Results:")
+    print(" Test Results:")
     for test_name, passed in results.items():
-        status = "✓ PASS" if passed else "✗ FAIL / ⚠️  SKIP"
+        status = " PASS" if passed else "✗ FAIL / ⚠️  SKIP"
         print(f"  {test_name}: {status}")
     
     passed_count = sum(1 for v in results.values() if v)
     total_count = len(results)
     
-    print(f"\n✅ {passed_count}/{total_count} tests passed")
+    print(f"\n {passed_count}/{total_count} tests passed")
     
     if passed_count == total_count:
-        print("\n🎉 System is ready!")
+        print("\n System is ready!")
     else:
-        print("\n📝 Next Steps:")
+        print("\n Next Steps:")
         if not results["RAG System"]:
             print("  1. Initialize RAG: python scripts/initialize_rag.py")
         if not results["Orchestrator"]:

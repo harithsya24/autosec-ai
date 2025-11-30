@@ -3,14 +3,16 @@ AutoSec AI - Main FastAPI Application
 Autonomous Cloud Security & Threat Mitigation Agent
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from datetime import datetime
-from typing import Dict, List, Optional
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Set
 from fastapi import Body
 import os
 import sys
+import json
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -46,6 +48,32 @@ app.add_middleware(
 log_analyzer = LogAnalyzerAgent(contamination=0.10)
 orchestrator = OrchestratorAgent(sandbox_mode=True)
 agent_initialized = False
+
+# ============================================================================
+# WebSocket Manager
+# ============================================================================
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Set[WebSocket] = set()
+    
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.add(websocket)
+    
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.discard(websocket)
+    
+    async def send_personal_message(self, message: dict, websocket: WebSocket):
+        await websocket.send_json(message)
+    
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except:
+                pass
+
+manager = ConnectionManager()
 
 # ============================================================================
 # Pydantic Models (Data Schemas)
@@ -291,6 +319,58 @@ async def analyze_log(log: LogEvent, full_analysis: bool = True):
         # Use orchestrator for complete analysis
         result = orchestrator.analyze_log(raw_log, return_full_analysis=full_analysis)
         
+        # Save threat to database if detected
+        if result.get('threat_detected'):
+            try:
+                from backend.utils.database import SecurityLogDatabase
+                
+                db = SecurityLogDatabase()
+                alert_id = f"threat_{datetime.now().timestamp()}"
+                
+                # Format threat data for storage
+                threat_data = {
+                    "alert_id": alert_id,
+                    "timestamp": result.get('anomaly', {}).get('timestamp', datetime.now()),
+                    "severity": result.get('threat_analysis', {}).get('severity', result.get('anomaly', {}).get('severity', 'medium')),
+                    "confidence": result.get('threat_analysis', {}).get('confidence', 0.5),
+                    "threat_type": result.get('threat_analysis', {}).get('threat_type', 'Unknown'),
+                    "description": result.get('threat_analysis', {}).get('explanation', 'Threat detected'),
+                    "anomaly": result.get('anomaly', {}),
+                    "status": "detected",
+                    "threat_analysis": result.get('threat_analysis', {}),
+                    "recommended_actions": result.get('recommended_actions', {}).get('actions', {}),
+                    "executed_actions": result.get('executed_actions', []),
+                    "pending_actions": result.get('pending_actions', []),
+                    "matched_techniques": result.get('threat_analysis', {}).get('matched_techniques', []),
+                    "affected_resources": [result.get('anomaly', {}).get('resource', '')] if result.get('anomaly', {}).get('resource') else []
+                }
+                
+                db.insert_threat(threat_data)
+                
+                # Update result with alert_id
+                result['alert_id'] = alert_id
+            except Exception as e:
+                print(f"Warning: Failed to save threat to database: {e}")
+            
+            # Broadcast threat detection via WebSocket
+            await manager.broadcast({
+                "type": "threat_detected",
+                "data": {
+                    **result,
+                    "alert_id": result.get('alert_id', f"threat_{datetime.now().timestamp()}")
+                },
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Broadcast action execution
+        if result.get('executed_actions'):
+            for action in result.get('executed_actions', []):
+                await manager.broadcast({
+                    "type": "action_executed",
+                    "data": action,
+                    "timestamp": datetime.now().isoformat()
+                })
+        
         return {
             "status": "analyzed",
             **result
@@ -302,26 +382,88 @@ async def analyze_log(log: LogEvent, full_analysis: bool = True):
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
 
 @app.get("/api/v1/threats")
-async def get_threats(limit: int = 10):
+async def get_threats(limit: int = 50, severity: Optional[str] = None):
     """
-    Get recent threat alerts
+    Get recent threat alerts from database
     """
-    return {
-        "threats": [],
-        "total": 0,
-        "limit": limit,
-        "message": "Database connection pending - coming in Week 3"
-    }
+    try:
+        from backend.utils.database import SecurityLogDatabase
+        
+        db = SecurityLogDatabase()
+        threats = db.get_threats(limit=limit, severity=severity)
+        
+        # Convert to frontend format
+        formatted_threats = []
+        for threat in threats:
+            formatted_threat = {
+                "alert_id": threat.get("alert_id"),
+                "severity": threat.get("severity", "medium"),
+                "confidence": threat.get("confidence", 0.5),
+                "threat_type": threat.get("threat_type", "Unknown"),
+                "description": threat.get("description", ""),
+                "timestamp": threat.get("timestamp").isoformat() if isinstance(threat.get("timestamp"), datetime) else threat.get("timestamp"),
+                "affected_resources": threat.get("affected_resources", []),
+                "anomaly_score": threat.get("anomaly_score"),
+                "matched_techniques": threat.get("matched_techniques", []),
+                "recommended_actions": threat.get("recommended_actions", []),
+                "executed_actions": threat.get("executed_actions", []),
+                "pending_actions": threat.get("pending_actions", []),
+                "threat_analysis": threat.get("threat_analysis", {})
+            }
+            formatted_threats.append(formatted_threat)
+        
+        return {
+            "status": "success",
+            "threats": formatted_threats,
+            "total": len(formatted_threats),
+            "limit": limit
+        }
+    except Exception as e:
+        import traceback
+        print(f"Error getting threats:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to get threats: {str(e)}")
 
 @app.get("/api/v1/threats/{alert_id}")
 async def get_threat_detail(alert_id: str):
     """
     Get detailed information about a specific threat
     """
-    raise HTTPException(
-        status_code=404,
-        detail=f"Threat {alert_id} not found - database not yet connected"
-    )
+    try:
+        from backend.utils.database import SecurityLogDatabase
+        
+        db = SecurityLogDatabase()
+        threat = db.get_threat_by_id(alert_id)
+        
+        if not threat:
+            raise HTTPException(status_code=404, detail=f"Threat {alert_id} not found")
+        
+        # Convert to frontend format
+        formatted_threat = {
+            "alert_id": threat.get("alert_id"),
+            "severity": threat.get("severity", "medium"),
+            "confidence": threat.get("confidence", 0.5),
+            "threat_type": threat.get("threat_type", "Unknown"),
+            "description": threat.get("description", ""),
+            "timestamp": threat.get("timestamp").isoformat() if isinstance(threat.get("timestamp"), datetime) else threat.get("timestamp"),
+            "affected_resources": threat.get("affected_resources", []),
+            "anomaly_score": threat.get("anomaly_score"),
+            "matched_techniques": threat.get("matched_techniques", []),
+            "recommended_actions": threat.get("recommended_actions", []),
+            "executed_actions": threat.get("executed_actions", []),
+            "pending_actions": threat.get("pending_actions", []),
+            "threat_analysis": threat.get("threat_analysis", {})
+        }
+        
+        return {
+            "status": "success",
+            **formatted_threat
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        print(f"Error getting threat detail:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to get threat: {str(e)}")
 
 @app.get("/api/v1/system/status")
 async def get_system_status():
@@ -337,6 +479,185 @@ async def get_system_status():
         "agents": status,
         "timestamp": datetime.now().isoformat()
     }
+
+# ============================================================================
+# Action Management Endpoints (Week 3)
+# ============================================================================
+
+@app.get("/api/v1/actions/pending")
+async def get_pending_actions():
+    """
+    Get all pending actions requiring approval
+    """
+    global orchestrator
+    
+    try:
+        pending = orchestrator.action_executor.get_pending_actions()
+        return {
+            "status": "success",
+            "count": len(pending),
+            "actions": pending,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get pending actions: {str(e)}")
+
+@app.post("/api/v1/actions/{action_id}/approve")
+async def approve_action(
+    action_id: str,
+    approver: str = Body(...),
+    reason: Optional[str] = Body(None)
+):
+    """
+    Approve a pending action
+    
+    Args:
+        action_id: ID of the action to approve
+        approver: Username/ID of the person approving
+        reason: Optional reason for approval
+    """
+    global orchestrator
+    
+    try:
+        result = orchestrator.action_executor.approve_action(action_id, approver, reason)
+        
+        # Broadcast action approval via WebSocket
+        await manager.broadcast({
+            "type": "action_approved",
+            "data": result,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        return {
+            "status": "success",
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to approve action: {str(e)}")
+
+@app.post("/api/v1/actions/{action_id}/reject")
+async def reject_action(
+    action_id: str,
+    approver: str = Body(...),
+    reason: Optional[str] = Body(None)
+):
+    """
+    Reject a pending action
+    
+    Args:
+        action_id: ID of the action to reject
+        approver: Username/ID of the person rejecting
+        reason: Optional reason for rejection
+    """
+    global orchestrator
+    
+    try:
+        result = orchestrator.action_executor.reject_action(action_id, approver, reason)
+        return {
+            "status": "success",
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to reject action: {str(e)}")
+
+@app.get("/api/v1/actions/history")
+async def get_action_history(limit: int = 50):
+    """
+    Get action execution history
+    
+    Args:
+        limit: Maximum number of actions to return
+    """
+    global orchestrator
+    
+    try:
+        history = orchestrator.action_executor.get_action_history(limit)
+        return {
+            "status": "success",
+            "count": len(history),
+            "actions": history,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get action history: {str(e)}")
+
+@app.post("/api/v1/actions/{action_id}/rollback")
+async def rollback_action(
+    action_id: str,
+    reason: Optional[str] = Body(None)
+):
+    """
+    Rollback a completed action
+    
+    Args:
+        action_id: ID of the action to rollback
+        reason: Optional reason for rollback
+    """
+    global orchestrator
+    
+    try:
+        result = orchestrator.action_executor.rollback_action(action_id, reason)
+        return {
+            "status": "success",
+            **result
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to rollback action: {str(e)}")
+
+@app.get("/api/v1/actions/{action_id}")
+async def get_action_detail(action_id: str):
+    """
+    Get details of a specific action
+    """
+    global orchestrator
+    
+    try:
+        import sqlite3
+        from backend.utils.database import SecurityLogDatabase
+        
+        db = SecurityLogDatabase()
+        conn = sqlite3.connect(
+            db.db_path, 
+            detect_types=sqlite3.PARSE_DECLTYPES,
+            timeout=10.0
+        )
+        try:
+            conn.row_factory = lambda cursor, row: {
+                col[0]: row[idx] for idx, col in enumerate(cursor.description)
+            }
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
+            action = cursor.fetchone()
+            
+            if not action:
+                raise HTTPException(status_code=404, detail="Action not found")
+            
+            # Get approval history if exists
+            cursor.execute('''
+                SELECT * FROM action_approvals
+                WHERE action_id = ?
+                ORDER BY approved_at DESC
+            ''', (action_id,))
+            approvals = cursor.fetchall()
+            
+            # Parse JSON fields
+            if action.get('parameters'):
+                action['parameters'] = json.loads(action['parameters'])
+            if action.get('rollback_info'):
+                action['rollback_info'] = json.loads(action['rollback_info'])
+            
+            return {
+                "status": "success",
+                "action": action,
+                "approvals": approvals
+            }
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get action: {str(e)}")
 
 @app.post("/api/v1/analyze/batch")
 async def analyze_batch_logs(
@@ -385,6 +706,14 @@ async def analyze_batch_logs(
         # Use orchestrator for batch analysis
         result = orchestrator.analyze_batch(raw_logs, return_full_analysis=full_analysis)
         
+        # Broadcast threat detections via WebSocket
+        if result.get('threat_detected'):
+            await manager.broadcast({
+                "type": "threat_detected",
+                "data": result,
+                "timestamp": datetime.now().isoformat()
+            })
+        
         return {
             "status": "analyzed",
             **result
@@ -394,6 +723,90 @@ async def analyze_batch_logs(
         import traceback
         print(f"Batch analysis error:\n{traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Batch analysis failed: {str(e)}")
+
+# ============================================================================
+# WebSocket Endpoint
+# ============================================================================
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive and handle incoming messages
+            data = await websocket.receive_text()
+            # Echo back or handle client messages
+            await manager.send_personal_message({
+                "type": "message",
+                "data": {"echo": data},
+                "timestamp": datetime.now().isoformat()
+            }, websocket)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+# ============================================================================
+# Compliance Reporting Endpoints (Week 4)
+# ============================================================================
+
+class ComplianceReportRequest(BaseModel):
+    type: str  # "soc2", "gdpr", "hipaa", "custom"
+    period_start: str
+    period_end: str
+
+@app.post("/api/v1/compliance/reports")
+async def generate_compliance_report(request: ComplianceReportRequest):
+    """
+    Generate a compliance report using LLM-powered analysis
+    
+    Args:
+        request: Report type and date range
+    
+    Returns:
+        Generated compliance report
+    """
+    global orchestrator
+    
+    try:
+        from agents.compliance_agent import ComplianceAgent
+        
+        compliance_agent = ComplianceAgent()
+        report = await compliance_agent.generate_report(
+            report_type=request.type,
+            start_date=request.period_start,
+            end_date=request.period_end
+        )
+        
+        return report
+        
+    except Exception as e:
+        import traceback
+        print(f"Compliance report error:\n{traceback.format_exc()}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate compliance report: {str(e)}"
+        )
+
+@app.get("/api/v1/compliance/reports")
+async def get_compliance_reports():
+    """
+    Get list of generated compliance reports
+    """
+    # TODO: Store reports in database
+    return {
+        "status": "success",
+        "reports": [],
+        "message": "Report storage coming soon"
+    }
+
+@app.get("/api/v1/compliance/reports/{report_id}")
+async def get_compliance_report(report_id: str):
+    """
+    Get a specific compliance report by ID
+    """
+    raise HTTPException(
+        status_code=404,
+        detail="Report storage not yet implemented"
+    )
 
 # ============================================================================
 # Startup and Shutdown Events

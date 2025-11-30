@@ -4,11 +4,13 @@ Database setup and real-time streaming pipeline
 """
 import sqlite3
 import json
+import os
 from datetime import datetime
 from typing import List, Dict, Any
 import threading
 from queue import Queue
 import time
+from pathlib import Path
 
 # Fix Python 3.12 datetime deprecation
 sqlite3.register_adapter(datetime, lambda val: val.isoformat())
@@ -18,8 +20,15 @@ sqlite3.register_converter("DATETIME", lambda val: datetime.fromisoformat(val.de
 class SecurityLogDatabase:
     """SQLite database for processed security logs"""
 
-    def __init__(self, db_path: str = "data/security_logs.db"):
+    def __init__(self, db_path: str = None):
+        if db_path is None:
+            # Get project root (2 levels up from backend/utils)
+            project_root = Path(__file__).parent.parent.parent
+            db_path = str(project_root / "data" / "security_logs.db")
+        
         self.db_path = db_path
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.init_database()
 
     def init_database(self):
@@ -62,6 +71,30 @@ class SecurityLogDatabase:
             )
         ''')
 
+        # Threats table - stores complete threat analysis results
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS threats (
+                alert_id TEXT PRIMARY KEY,
+                timestamp DATETIME NOT NULL,
+                severity TEXT NOT NULL,
+                confidence REAL NOT NULL,
+                threat_type TEXT NOT NULL,
+                description TEXT,
+                anomaly_score REAL,
+                source_ip TEXT,
+                user_id TEXT,
+                resource TEXT,
+                status TEXT,
+                threat_analysis JSON,
+                recommended_actions JSON,
+                executed_actions JSON,
+                pending_actions JSON,
+                matched_techniques TEXT,
+                affected_resources TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+
         # Events table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS events (
@@ -89,8 +122,122 @@ class SecurityLogDatabase:
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_events_source_ip ON events(source_ip)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id)')
 
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_threats_timestamp ON threats(timestamp)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_threats_severity ON threats(severity)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_threats_confidence ON threats(confidence)')
+
         conn.commit()
         conn.close()
+    
+    def insert_threat(self, threat_data: Dict[str, Any]) -> str:
+        """Insert a complete threat analysis into the database"""
+        conn = sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+        cursor = conn.cursor()
+        
+        alert_id = threat_data.get('alert_id', f"threat_{datetime.now().timestamp()}")
+        
+        cursor.execute('''
+            INSERT OR REPLACE INTO threats 
+            (alert_id, timestamp, severity, confidence, threat_type, description,
+             anomaly_score, source_ip, user_id, resource, status,
+             threat_analysis, recommended_actions, executed_actions, pending_actions,
+             matched_techniques, affected_resources)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            alert_id,
+            threat_data.get('timestamp', datetime.now()),
+            threat_data.get('severity', 'medium'),
+            threat_data.get('confidence', 0.5),
+            threat_data.get('threat_type', 'Unknown'),
+            threat_data.get('description', ''),
+            threat_data.get('anomaly', {}).get('anomaly_score', 0.0),
+            threat_data.get('anomaly', {}).get('source_ip', ''),
+            threat_data.get('anomaly', {}).get('user_id', ''),
+            threat_data.get('anomaly', {}).get('resource', ''),
+            threat_data.get('status', 'detected'),
+            json.dumps(threat_data.get('threat_analysis', {})),
+            json.dumps(threat_data.get('recommended_actions', [])),
+            json.dumps(threat_data.get('executed_actions', [])),
+            json.dumps(threat_data.get('pending_actions', [])),
+            ','.join(threat_data.get('matched_techniques', [])),
+            ','.join(threat_data.get('affected_resources', []))
+        ))
+        
+        conn.commit()
+        conn.close()
+        return alert_id
+    
+    def get_threats(self, limit: int = 50, severity: str = None) -> List[Dict]:
+        """Get threats from database"""
+        conn = sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        if severity:
+            cursor.execute('''
+                SELECT * FROM threats
+                WHERE severity = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+            ''', (severity, limit))
+        else:
+            cursor.execute('''
+                SELECT * FROM threats
+                ORDER BY timestamp DESC
+                LIMIT ?
+            ''', (limit,))
+        
+        threats = []
+        for row in cursor.fetchall():
+            threat = dict(row)
+            # Parse JSON fields
+            if threat.get('threat_analysis'):
+                threat['threat_analysis'] = json.loads(threat['threat_analysis'])
+            if threat.get('recommended_actions'):
+                threat['recommended_actions'] = json.loads(threat['recommended_actions'])
+            if threat.get('executed_actions'):
+                threat['executed_actions'] = json.loads(threat['executed_actions'])
+            if threat.get('pending_actions'):
+                threat['pending_actions'] = json.loads(threat['pending_actions'])
+            if threat.get('matched_techniques'):
+                threat['matched_techniques'] = threat['matched_techniques'].split(',') if threat['matched_techniques'] else []
+            if threat.get('affected_resources'):
+                threat['affected_resources'] = threat['affected_resources'].split(',') if threat['affected_resources'] else []
+            threats.append(threat)
+        
+        conn.close()
+        return threats
+    
+    def get_threat_by_id(self, alert_id: str) -> Dict:
+        """Get a specific threat by ID"""
+        conn = sqlite3.connect(self.db_path, detect_types=sqlite3.PARSE_DECLTYPES)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM threats WHERE alert_id = ?', (alert_id,))
+        row = cursor.fetchone()
+        
+        if not row:
+            conn.close()
+            return None
+        
+        threat = dict(row)
+        # Parse JSON fields
+        if threat.get('threat_analysis'):
+            threat['threat_analysis'] = json.loads(threat['threat_analysis'])
+        if threat.get('recommended_actions'):
+            threat['recommended_actions'] = json.loads(threat['recommended_actions'])
+        if threat.get('executed_actions'):
+            threat['executed_actions'] = json.loads(threat['executed_actions'])
+        if threat.get('pending_actions'):
+            threat['pending_actions'] = json.loads(threat['pending_actions'])
+        if threat.get('matched_techniques'):
+            threat['matched_techniques'] = threat['matched_techniques'].split(',') if threat['matched_techniques'] else []
+        if threat.get('affected_resources'):
+            threat['affected_resources'] = threat['affected_resources'].split(',') if threat['affected_resources'] else []
+        
+        conn.close()
+        return threat
 
     def insert_log(self, log: Dict[str, Any]) -> int:
         """Insert processed log into database"""

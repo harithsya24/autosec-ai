@@ -16,12 +16,14 @@ try:
     from backend.agents.log_analyzer import LogAnalyzerAgent
     from backend.agents.threat_intelligence_agent import ThreatIntelligenceAgent
     from backend.agents.response_agent import ResponseAgent
+    from backend.agents.action_executor import ActionExecutor
     from rag.vector_store.chroma_setup import ThreatIntelligenceRAG
 except ImportError:
     # Fallback for relative imports
     from .log_analyzer import LogAnalyzerAgent
     from .threat_intelligence_agent import ThreatIntelligenceAgent
     from .response_agent import ResponseAgent
+    from .action_executor import ActionExecutor
     import sys
     from pathlib import Path
     sys.path.append(str(Path(__file__).parent.parent.parent))
@@ -44,6 +46,7 @@ class OrchestratorAgent:
         log_analyzer: Optional[LogAnalyzerAgent] = None,
         threat_intel: Optional[ThreatIntelligenceAgent] = None,
         response_agent: Optional[ResponseAgent] = None,
+        action_executor: Optional[ActionExecutor] = None,
         sandbox_mode: bool = True
     ):
         """
@@ -53,10 +56,12 @@ class OrchestratorAgent:
             log_analyzer: LogAnalyzerAgent instance (creates new if None)
             threat_intel: ThreatIntelligenceAgent instance (creates new if None)
             response_agent: ResponseAgent instance (creates new if None)
+            action_executor: ActionExecutor instance (creates new if None)
             sandbox_mode: Enable sandbox mode for actions
         """
         self.log_analyzer = log_analyzer or LogAnalyzerAgent()
         self.response_agent = response_agent or ResponseAgent(sandbox_mode=sandbox_mode)
+        self.action_executor = action_executor or ActionExecutor(sandbox_mode=sandbox_mode)
         
         # Initialize RAG if not provided
         if threat_intel is None:
@@ -118,6 +123,58 @@ class OrchestratorAgent:
             threat_analysis, anomaly
         )
         
+        # Step 4: Execute actions (green and auto-execute yellow)
+        executed_actions = []
+        pending_actions = []
+        
+        # Execute green actions
+        for action in action_recommendations.get("actions", {}).get("green", []):
+            execution_result = self.action_executor.execute_action(action)
+            executed_actions.append(execution_result)
+        
+        # Execute yellow actions (if auto-execute enabled)
+        for action in action_recommendations.get("actions", {}).get("yellow", []):
+            if action.get("auto_execute", False):
+                execution_result = self.action_executor.execute_action(action)
+                executed_actions.append(execution_result)
+            else:
+                pending_actions.append(action)
+        
+        # Queue red actions for approval
+        for action in action_recommendations.get("actions", {}).get("red", []):
+            execution_result = self.action_executor.execute_action(action)
+            pending_actions.append({
+                **action,
+                "execution_status": execution_result
+            })
+        
+        # Format actions for frontend
+        formatted_executed = []
+        for action in executed_actions:
+            if isinstance(action, dict):
+                formatted_executed.append({
+                    "action_id": action.get("action_id", ""),
+                    "type": action.get("type", ""),
+                    "tier": action.get("tier", "green"),
+                    "status": "completed",
+                    "description": action.get("description", ""),
+                    "parameters": action.get("parameters", {}),
+                    "executed_at": action.get("executed_at", datetime.now().isoformat())
+                })
+        
+        formatted_pending = []
+        for action in pending_actions:
+            if isinstance(action, dict):
+                formatted_pending.append({
+                    "action_id": action.get("action_id", ""),
+                    "type": action.get("type", ""),
+                    "tier": action.get("tier", "red"),
+                    "status": "pending",
+                    "description": action.get("description", ""),
+                    "parameters": action.get("parameters", {}),
+                    "requires_approval": True
+                })
+        
         # Combine everything
         return {
             "threat_detected": True,
@@ -127,16 +184,26 @@ class OrchestratorAgent:
                 "severity": anomaly.get("severity"),
                 "detection_method": anomaly.get("detection_method", "ml-based"),
                 "source_ip": anomaly.get("source_ip"),
+                "user_id": anomaly.get("user_id"),
                 "action": anomaly.get("action"),
+                "resource": anomaly.get("resource"),
                 "status": anomaly.get("status"),
-                "timestamp": anomaly.get("timestamp")
+                "timestamp": anomaly.get("timestamp", datetime.now().isoformat())
             },
-            "threat_analysis": threat_analysis,
+            "threat_analysis": {
+                **threat_analysis,
+                "reasoning_chain": threat_analysis.get("reasoning_chain", []),
+                "retrieved_context": threat_analysis.get("retrieved_context", []),
+                "confidence_breakdown": threat_analysis.get("confidence_breakdown", {})
+            },
             "recommended_actions": action_recommendations,
+            "executed_actions": formatted_executed,
+            "pending_actions": formatted_pending,
             "timeline": {
                 "detected_at": anomaly.get("detected_at", datetime.now().isoformat()),
                 "analyzed_at": threat_analysis.get("analyzed_at", datetime.now().isoformat()),
-                "recommendations_generated_at": action_recommendations.get("generated_at")
+                "recommendations_generated_at": action_recommendations.get("generated_at"),
+                "actions_executed_at": datetime.now().isoformat() if executed_actions else None
             },
             "analyzed_at": datetime.now().isoformat()
         }
@@ -228,6 +295,10 @@ class OrchestratorAgent:
             "response_agent": {
                 "sandbox_mode": self.response_agent.sandbox_mode
             },
+            "action_executor": {
+                "sandbox_mode": self.action_executor.sandbox_mode,
+                "active_actions": len(self.action_executor.active_actions)
+            },
             "orchestrator": {
                 "status": "ready" if self.log_analyzer.is_trained else "not_ready",
                 "sandbox_mode": self.sandbox_mode
@@ -244,14 +315,14 @@ if __name__ == "__main__":
     
     # Check status
     status = orchestrator.get_system_status()
-    print(f"\n📊 System Status:")
-    print(f"  Log Analyzer: {'✓ Trained' if status['log_analyzer']['trained'] else '✗ Not Trained'}")
-    print(f"  Threat Intel: RAG={'✓' if status['threat_intelligence']['rag_available'] else '✗'}, "
-          f"LLM={'✓' if status['threat_intelligence']['llm_enabled'] else '✗'}")
+    print(f"\n System Status:")
+    print(f"  Log Analyzer: {' Trained' if status['log_analyzer']['trained'] else '✗ Not Trained'}")
+    print(f"  Threat Intel: RAG={'Yes' if status['threat_intelligence']['rag_available'] else '✗'}, "
+          f"LLM={'Yes' if status['threat_intelligence']['llm_enabled'] else '✗'}")
     print(f"  Sandbox Mode: {'ON' if status['response_agent']['sandbox_mode'] else 'OFF'}")
     
     if not status['log_analyzer']['trained']:
-        print("\n⚠️  Log Analyzer not trained. Run training first.")
+        print("\n  Log Analyzer not trained. Run training first.")
         print("   Example: POST /api/v1/train")
     else:
         # Test with sample log
@@ -277,21 +348,21 @@ if __name__ == "__main__":
             "Label": "BENIGN"
         }
         
-        print("\n🔍 Analyzing sample log...")
+        print("\n Analyzing sample log...")
         try:
             result = orchestrator.analyze_log(sample_log, return_full_analysis=True)
             
             if result.get("threat_detected"):
-                print(f"\n🚨 Threat Detected!")
+                print(f"\n Threat Detected!")
                 print(f"  Severity: {result['anomaly']['severity']}")
                 print(f"  Threat Type: {result['threat_analysis']['threat_type']}")
                 print(f"  Confidence: {result['threat_analysis']['confidence']:.2%}")
                 print(f"\n  Explanation:\n  {result['threat_analysis']['explanation']}")
                 print(f"\n  Recommended Actions: {result['recommended_actions']['summary']['total_actions']}")
             else:
-                print("\n✓ No threats detected")
+                print("\n No threats detected")
         except Exception as e:
-            print(f"\n❌ Error: {e}")
+            print(f"\n Error: {e}")
     
-    print("\n✓ Orchestrator test complete!")
+    print("\n Orchestrator test complete!")
 

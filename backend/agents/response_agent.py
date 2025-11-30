@@ -20,9 +20,9 @@ class ResponseAgent:
     AI Agent that recommends mitigation actions
     
     Implements the "Traffic Light" system:
-    - 🟢 GREEN: Safe actions (log, alert, monitor)
-    - 🟡 YELLOW: Low-risk actions (rate-limit, flag)
-    - 🔴 RED: High-risk actions (lock account, block IP)
+    - GREEN: Safe actions (log, alert, monitor)
+    - YELLOW: Low-risk actions (rate-limit, flag)
+    - RED: High-risk actions (lock account, block IP)
     """
     
     def __init__(self, sandbox_mode: bool = True):
@@ -84,7 +84,7 @@ class ResponseAgent:
         threat_analysis: Dict,
         anomaly: Dict
     ) -> List[Dict]:
-        """Get 🟢 GREEN tier actions (always safe to auto-execute)"""
+        """Get  GREEN tier actions (always safe to auto-execute)"""
         actions = []
         
         # Always log the event
@@ -142,7 +142,7 @@ class ResponseAgent:
         confidence: float,
         severity: str
     ) -> List[Dict]:
-        """Get 🟡 YELLOW tier actions (low risk, reversible)"""
+        """Get YELLOW tier actions (low risk, reversible)"""
         actions = []
         
         # Only recommend yellow actions if confidence is reasonable
@@ -208,7 +208,7 @@ class ResponseAgent:
         confidence: float,
         severity: str
     ) -> List[Dict]:
-        """Get 🔴 RED tier actions (require human approval)"""
+        """Get  RED tier actions (require human approval)"""
         actions = []
         
         # Only recommend red actions for high confidence + high severity
@@ -349,21 +349,21 @@ if __name__ == "__main__":
     # Get recommendations
     recommendations = agent.recommend_actions(threat_analysis, anomaly)
     
-    print("\n📋 Recommended Actions:")
-    print(f"\n🟢 GREEN ({len(recommendations['actions']['green'])} actions):")
+    print("\n Recommended Actions:")
+    print(f"\n GREEN ({len(recommendations['actions']['green'])} actions):")
     for action in recommendations['actions']['green']:
-        print(f"  ✓ {action['description']}")
+        print(f"   {action['description']}")
     
-    print(f"\n🟡 YELLOW ({len(recommendations['actions']['yellow'])} actions):")
+    print(f"\n YELLOW ({len(recommendations['actions']['yellow'])} actions):")
     for action in recommendations['actions']['yellow']:
-        status = "✓ Auto" if action.get('auto_execute') else "⏸ Manual"
+        status = "Auto" if action.get('auto_execute') else "⏸ Manual"
         print(f"  {status} {action['description']}")
     
-    print(f"\n🔴 RED ({len(recommendations['actions']['red'])} actions):")
+    print(f"\n RED ({len(recommendations['actions']['red'])} actions):")
     for action in recommendations['actions']['red']:
-        print(f"  ⏸ {action['description']} (REQUIRES APPROVAL)")
+        print(f" {action['description']} (REQUIRES APPROVAL)")
     
-    print(f"\n📊 Summary:")
+    print(f"\n Summary:")
     print(f"  Total Actions: {recommendations['summary']['total_actions']}")
     print(f"  Auto-Executable: {recommendations['summary']['auto_executable']}")
     print(f"  Requires Approval: {recommendations['summary']['requires_approval']}")

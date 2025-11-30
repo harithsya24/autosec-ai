@@ -247,8 +247,8 @@ class LogAnalyzerAgent:
             print(f" Available columns: {list(raw_logs[0].keys())[:10]}")
             raise Exception("No benign logs found! Check label column name.")
     
-        print(f"✓ Found {len(benign_logs)} benign logs out of {len(raw_logs)} total")
-        print(f"✓ {len(raw_logs) - len(benign_logs)} attack logs will be treated as anomalies")
+        print(f" Found {len(benign_logs)} benign logs out of {len(raw_logs)} total")
+        print(f" {len(raw_logs) - len(benign_logs)} attack logs will be treated as anomalies")
     
         # Train on benign traffic
         return self.train(benign_logs)

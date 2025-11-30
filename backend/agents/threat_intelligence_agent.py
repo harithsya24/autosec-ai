@@ -20,7 +20,7 @@ try:
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
-    print("⚠️  LangChain not available. Using fallback mode.")
+    print("  LangChain not available. Using fallback mode.")
 
 from rag.vector_store.chroma_setup import ThreatIntelligenceRAG
 
@@ -61,7 +61,7 @@ class ThreatIntelligenceAgent:
         if self.use_llm:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                print("⚠️  OPENAI_API_KEY not found. Set it in .env file or disable LLM.")
+                print("  OPENAI_API_KEY not found. Set it in .env file or disable LLM.")
                 self.use_llm = False
             else:
                 try:
@@ -72,13 +72,13 @@ class ThreatIntelligenceAgent:
                     )
                     print(f"✓ LLM initialized: {llm_model}")
                 except Exception as e:
-                    print(f"⚠️  Failed to initialize LLM: {e}")
+                    print(f"  Failed to initialize LLM: {e}")
                     self.use_llm = False
         else:
             self.llm = None
             if not LANGCHAIN_AVAILABLE:
-                print("⚠️  LangChain not installed. Install with: pip install langchain langchain-openai")
-            print("ℹ️  Running in RAG-only mode (no LLM reasoning)")
+                print("  LangChain not installed. Install with: pip install langchain langchain-openai")
+            print("  Running in RAG-only mode (no LLM reasoning)")
     
     def analyze_threat(
         self,
@@ -103,9 +103,9 @@ class ThreatIntelligenceAgent:
         cve_results = self.rag.search_cves(query, n_results=2)
         incident_results = self.rag.search_incidents(query, n_results=2)
         
-        # Step 3: Calculate confidence from retrieval quality
+        # Step 3: Calculate enhanced confidence from multiple factors
         confidence = self._calculate_confidence(
-            threat_results, cve_results, incident_results
+            threat_results, cve_results, incident_results, anomaly
         )
         
         # Step 4: Generate explanation (LLM or template-based)
@@ -180,17 +180,23 @@ class ThreatIntelligenceAgent:
         self,
         threat_results: List[Dict],
         cve_results: List[Dict],
-        incident_results: List[Dict]
+        incident_results: List[Dict],
+        anomaly: Optional[Dict] = None
     ) -> float:
         """
-        Calculate confidence score based on retrieval quality
+        Enhanced confidence score calculation using multiple factors
+        
+        Factors:
+        1. RAG retrieval quality (similarity scores)
+        2. Number of matching sources
+        3. Anomaly score strength
+        4. Historical pattern matching
         
         Returns:
             Confidence score 0.0 to 1.0
         """
-        base_confidence = 0.5
-        
-        # Boost confidence if we found relevant threats
+        # Factor 1: RAG Retrieval Quality (40% weight)
+        rag_confidence = 0.0
         if threat_results:
             # Use distance as quality indicator (lower distance = better match)
             best_threat_distance = min(
@@ -199,17 +205,52 @@ class ThreatIntelligenceAgent:
             )
             # Convert distance to similarity (assuming cosine distance)
             threat_similarity = max(0, 1.0 - best_threat_distance)
-            base_confidence += threat_similarity * 0.3
+            rag_confidence = threat_similarity * 0.4
         
-        # Boost if CVE matches found
+        # Factor 2: Source Diversity (20% weight)
+        source_confidence = 0.0
+        source_count = 0
+        if threat_results:
+            source_count += len(threat_results)
         if cve_results:
-            base_confidence += 0.1
-        
-        # Boost if similar incidents found
+            source_count += len(cve_results)
         if incident_results:
-            base_confidence += 0.1
+            source_count += len(incident_results)
         
-        return min(1.0, base_confidence)
+        # More sources = higher confidence (capped at 3+ sources)
+        source_confidence = min(0.2, (source_count / 5.0) * 0.2)
+        
+        # Factor 3: Anomaly Score Strength (30% weight)
+        anomaly_confidence = 0.0
+        if anomaly:
+            anomaly_score = abs(anomaly.get("anomaly_score", 0.0))
+            # Normalize anomaly score to 0-1 range (assuming scores are -1 to 0)
+            normalized_score = min(1.0, abs(anomaly_score))
+            anomaly_confidence = normalized_score * 0.3
+        
+        # Factor 4: Retrieval Quality Distribution (10% weight)
+        quality_confidence = 0.0
+        if threat_results:
+            # Check if multiple high-quality matches exist
+            high_quality_matches = sum(
+                1 for r in threat_results 
+                if r.get("distance", 1.0) < 0.3
+            )
+            if high_quality_matches >= 2:
+                quality_confidence = 0.1
+            elif high_quality_matches == 1:
+                quality_confidence = 0.05
+        
+        # Combine all factors
+        total_confidence = (
+            rag_confidence +
+            source_confidence +
+            anomaly_confidence +
+            quality_confidence
+        )
+        
+        # Ensure confidence is in valid range
+        return min(1.0, max(0.0, total_confidence))
     
     def _generate_llm_explanation(
         self,
@@ -283,7 +324,7 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
             response = self.llm.invoke(messages)
             return response.content
         except Exception as e:
-            print(f"⚠️  LLM call failed: {e}")
+            print(f" LLM call failed: {e}")
             return self._generate_template_explanation(
                 anomaly, threat_results, cve_results, incident_results
             )
@@ -437,7 +478,7 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
 
 if __name__ == "__main__":
     """Test the Threat Intelligence Agent"""
-    print("🧠 Testing Threat Intelligence Agent...")
+    print(" Testing Threat Intelligence Agent...")
     
     # Initialize RAG
     rag = ThreatIntelligenceRAG()
@@ -451,7 +492,7 @@ if __name__ == "__main__":
     
     stats = rag.get_collection_stats()
     if stats['threats'] == 0:
-        print("📚 Loading sample threat intelligence...")
+        print(" Loading sample threat intelligence...")
         rag.add_threat_documents(create_sample_threat_documents())
         rag.add_cve_documents(create_sample_cve_documents())
         rag.add_incident_reports(create_sample_incident_reports())
@@ -475,10 +516,10 @@ if __name__ == "__main__":
     }
     
     # Analyze
-    print("\n🔍 Analyzing sample anomaly...")
+    print("\n Analyzing sample anomaly...")
     analysis = agent.analyze_threat(sample_anomaly)
     
-    print("\n📊 Analysis Results:")
+    print("\n Analysis Results:")
     print(f"  Threat Type: {analysis['threat_type']}")
     print(f"  Confidence: {analysis['confidence']:.2%}")
     print(f"  Severity: {analysis['severity']}")
