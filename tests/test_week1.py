@@ -14,7 +14,6 @@ sys.path.append(str(project_root))
 
 
 class TestWeek1:
-    """Test Week 1 foundation components"""
     
     def __init__(self):
         self.test_results = []

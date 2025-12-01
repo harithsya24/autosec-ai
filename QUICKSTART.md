@@ -1,6 +1,6 @@
 # AutoSec AI - Quick Start Guide
 
-## 🚀 Getting Started in 5 Minutes
+## Getting Started in 5 Minutes
 
 ### Step 1: Backend Setup
 
@@ -70,7 +70,7 @@ curl -X POST http://localhost:8000/api/v1/analyze \
 
 Watch the threat appear in real-time on the dashboard!
 
-## 📋 What's Available
+##  What's Available
 
 ### Dashboard Pages
 
@@ -89,7 +89,7 @@ Watch the threat appear in real-time on the dashboard!
 - `POST /api/v1/compliance/reports` - Generate report
 - `WS /ws` - WebSocket for real-time updates
 
-## 🎯 Demo Flow
+##  Demo Flow
 
 1. **Show Dashboard** - Explain real-time threat stream
 2. **Trigger Threat** - Analyze a suspicious log
@@ -98,7 +98,7 @@ Watch the threat appear in real-time on the dashboard!
 5. **Approve Action** - Demonstrate approval workflow
 6. **Generate Report** - Create compliance report
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Backend Issues
 
@@ -122,31 +122,18 @@ cd frontend
 npm install
 ```
 
-**Port conflict:**
-```bash
-# Edit vite.config.ts to change port
-```
 
 **WebSocket not connecting:**
 - Check backend is running
 - Check CORS settings
 - Check browser console for errors
 
-## 📚 Documentation
+##  Documentation
 
-- [Week 4 Implementation](./docs/WEEK4_IMPLEMENTATION.md)
-- [Week 3 Complete](./docs/WEEK3_COMPLETE.md)
 - [Architecture](./docs/architecture.md)
 - [Frontend README](./frontend/README.md)
 
-## ✅ System Status
 
-- ✅ Week 1: Foundation - Complete
-- ✅ Week 2: AI Agents - Complete
-- ✅ Week 3: Action Execution - Complete
-- ✅ Week 4: Dashboard & Demo - Complete
-
-**MVP Status:** 🎉 **100% Complete!**
 
 
 

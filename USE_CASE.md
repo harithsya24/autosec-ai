@@ -1,10 +1,10 @@
 # Real-World Use Case: Network Security Monitoring
 
-## 🎯 Scenario
+##  Scenario
 
 **Security Operations Center (SOC)** monitoring network traffic in real-time to detect and respond to cyber attacks.
 
-## 📊 Data Source
+##  Data Source
 
 Using **CICIDS 2017 Dataset** - Real network traffic captures containing:
 - **Benign traffic** (Monday) - Normal network activity
@@ -13,7 +13,7 @@ Using **CICIDS 2017 Dataset** - Real network traffic captures containing:
 - **Web attacks** (Thursday morning) - HTTP-based attacks
 - **Infiltration** (Thursday afternoon) - Data exfiltration attempts
 
-## 🔄 Workflow
+##  Workflow
 
 ### Step 1: Baseline Training
 1. Load benign traffic from Monday dataset
@@ -34,7 +34,7 @@ Using **CICIDS 2017 Dataset** - Real network traffic captures containing:
 2. Include full analysis, confidence scores, and recommendations
 3. Make available via API and dashboard
 
-## 🚀 Running the Use Case
+##  Running the Use Case
 
 ### Prerequisites
 1. Backend API running: `cd backend/api && python main.py`
@@ -48,65 +48,65 @@ python scripts/process_real_threats.py
 ```
 
 This will:
-- ✅ Train on 15,000 benign records
-- ✅ Process 500 attack records from each attack type
-- ✅ Detect real threats using AI agents
-- ✅ Store threats in database
-- ✅ Display summary statistics
+- Train on 15,000 benign records
+- Process 500 attack records from each attack type
+- Detect real threats using AI agents
+- Store threats in database
+- Display summary statistics
 
 ### Expected Output
 
 ```
-🛡️  AutoSec AI - Real Threat Detection Use Case
+  AutoSec AI - Real Threat Detection Use Case
 ======================================================================
 
-📊 Scenario: Security Operations Center (SOC)
+ Scenario: Security Operations Center (SOC)
    Monitoring network traffic for malicious activity
    Processing real CICIDS 2017 attack dataset
 
-🔧 Initializing system...
+ Initializing system...
 
-📚 Step 1: Training on benign traffic (baseline)...
+ Step 1: Training on benign traffic (baseline)...
    Loading Monday-WorkingHours-pcap_ISCX.csv...
    Found 15,000 benign records
    Training anomaly detection model...
-   ✅ Model trained on benign traffic baseline
+   Model trained on benign traffic baseline
 
-🚨 Step 2: Processing real attack traffic...
+ Step 2: Processing real attack traffic...
    Simulating real-time threat detection
 
-   📁 Processing: DDoS Attack
+    Processing: DDoS Attack
       File: Friday-WorkingHours-Afternoon-DDos-pcap_ISCX.csv
       Found 500 attack records
-      ✅ Processed 500 records, detected 450 threats
+      Processed 500 records, detected 450 threats
 
-   📁 Processing: Port Scan Attack
+    Processing: Port Scan Attack
       File: Friday-WorkingHours-Afternoon-PortScan-pcap_ISCX.csv
       Found 500 attack records
-      ✅ Processed 500 records, detected 480 threats
+      Processed 500 records, detected 480 threats
 
    ...
 
 ======================================================================
-📊 DETECTION SUMMARY
+ DETECTION SUMMARY
 ======================================================================
-✅ Total threats detected: 1,850
-📁 Threats stored in database: 1,850
+ Total threats detected: 1,850
+ Threats stored in database: 1,850
 
-📈 Threats by type:
+ Threats by type:
    • DDoS Attack: 450
    • Port Scan: 480
    • Web Attack: 420
    • Infiltration: 500
 
-🌐 View threats in dashboard:
+ View threats in dashboard:
    http://localhost:3000
 
-📡 API endpoint:
+ API endpoint:
    GET http://localhost:8000/api/v1/threats
 ```
 
-## 📱 Viewing Results
+##  Viewing Results
 
 ### Dashboard
 1. Open `http://localhost:3000`
@@ -123,7 +123,7 @@ curl http://localhost:8000/api/v1/threats
 curl http://localhost:8000/api/v1/threats/{alert_id}
 ```
 
-## 🎯 What You'll See
+##  What You'll See
 
 ### Real Threat Types
 - **DDoS Attacks**: High-volume network flooding
@@ -143,7 +143,7 @@ curl http://localhost:8000/api/v1/threats/{alert_id}
 - Yellow actions: Auto-executed with notification (rate limiting)
 - Red actions: Queued for approval (account locks, IP blocks)
 
-## 🔍 Technical Details
+##  Technical Details
 
 ### Data Conversion
 CICIDS network flow data is converted to unified schema:
@@ -161,14 +161,14 @@ CICIDS network flow data is converted to unified schema:
 4. **Action Recommendation**: Traffic light system
 5. **Execution**: Autonomous or approval-based
 
-## 📈 Performance
+##  Performance
 
 - **Processing Speed**: ~100 records/second
 - **Detection Accuracy**: Based on trained model
 - **False Positive Rate**: Depends on model tuning
 - **Response Time**: < 3 seconds per threat analysis
 
-## 🎓 Learning Outcomes
+##  Learning Outcomes
 
 This use case demonstrates:
 - Real-world threat detection
@@ -179,7 +179,7 @@ This use case demonstrates:
 
 ---
 
-**Ready to run?** Execute `python scripts/process_real_threats.py` and watch real threats appear in your dashboard!
+**Ready to run?** Execute `python scripts/process_real_threats.py` and watch real threats appear on dashboard!
 
 
 

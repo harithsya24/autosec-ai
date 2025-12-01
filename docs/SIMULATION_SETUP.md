@@ -9,21 +9,21 @@ The threat simulation system allows you to generate realistic security threats f
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Threat Simulator                                       │
-│  - Generates realistic threat logs                       │
+│  - Generates realistic threat logs                      │
 │  - 10 threat types (Credential Stuffing, DDoS, etc.)    │
 │  - Configurable intervals and threat mix                │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Orchestrator Agent                                      │
+│  Orchestrator Agent                                     │
 │  - Processes simulated threats through full pipeline    │
-│  - Detection → RAG → LLM → Response                      │
+│  - Detection → RAG → LLM → Response                     │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Database + WebSocket                                    │
+│  Database + WebSocket                                   │
 │  - Saves threats to database                            │
 │  - Broadcasts to frontend in real-time                  │
 └─────────────────────────────────────────────────────────┘
