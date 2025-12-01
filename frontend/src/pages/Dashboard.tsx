@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { AlertTriangle, CheckCircle, Clock, TrendingUp } from 'lucide-react'
 import { threatService, systemService } from '../services/api'
@@ -6,6 +6,7 @@ import { wsService } from '../services/websocket'
 import type { Threat, SystemStatus } from '../types'
 import ThreatCard from '../components/ThreatCard'
 import StatsCard from '../components/StatsCard'
+import SimulationControls from '../components/SimulationControls'
 import { formatDistanceToNow } from 'date-fns'
 
 export default function Dashboard() {
@@ -17,6 +18,8 @@ export default function Dashboard() {
     autoExecuted: 0,
     pendingApproval: 0,
   })
+  const [newThreatIds, setNewThreatIds] = useState<Set<string>>(new Set())
+  const threatsRef = useRef<Threat[]>([])
 
   useEffect(() => {
     // Load initial data
@@ -27,7 +30,23 @@ export default function Dashboard() {
     // Set up WebSocket listeners
     const unsubscribeThreat = wsService.on('threat_detected', (event) => {
       const newThreat = event.data as Threat
-      setThreats((prev) => [newThreat, ...prev])
+      // Mark as new for animation
+      setNewThreatIds((prev) => new Set([...prev, newThreat.alert_id]))
+      // Remove animation class after 3 seconds
+      setTimeout(() => {
+        setNewThreatIds((prev) => {
+          const next = new Set(prev)
+          next.delete(newThreat.alert_id)
+          return next
+        })
+      }, 3000)
+      
+      setThreats((prev) => {
+        // Check if threat already exists (avoid duplicates)
+        const exists = prev.some(t => t.alert_id === newThreat.alert_id)
+        if (exists) return prev
+        return [newThreat, ...prev]
+      })
       updateStats()
     })
 
@@ -119,14 +138,17 @@ export default function Dashboard() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Security Dashboard</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-2xl font-bold text-gray-900">Security Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500">
           Real-time threat detection and autonomous mitigation
         </p>
       </div>
 
+      {/* Simulation Controls */}
+      <SimulationControls />
+
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Events Detected"
           value={stats.totalDetected}
@@ -181,15 +203,23 @@ export default function Dashboard() {
       {/* Active Threats */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Active Threats (Real-Time Stream)
-          </h2>
-          <Link
-            to="/analytics"
-            className="text-sm text-primary-600 hover:text-primary-700 font-medium"
-          >
-            View All →
-          </Link>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Active Threats
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">Real-time security events and alerts</p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <span className="badge badge-info">
+              {threats.length} Active
+            </span>
+            <Link
+              to="/analytics"
+              className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+            >
+              View All →
+            </Link>
+          </div>
         </div>
 
         {threats.length === 0 ? (
@@ -203,7 +233,21 @@ export default function Dashboard() {
         ) : (
           <div className="space-y-4">
             {threats.map((threat) => (
-              <ThreatCard key={threat.alert_id} threat={threat} />
+              <div
+                key={threat.alert_id}
+                className={`transition-all duration-500 ${
+                  newThreatIds.has(threat.alert_id)
+                    ? 'animate-slide-in-right opacity-100'
+                    : 'opacity-100'
+                }`}
+                style={{
+                  animation: newThreatIds.has(threat.alert_id)
+                    ? 'slideInRight 0.5s ease-out'
+                    : undefined,
+                }}
+              >
+                <ThreatCard threat={threat} />
+              </div>
             ))}
           </div>
         )}
@@ -211,5 +255,6 @@ export default function Dashboard() {
     </div>
   )
 }
+
 
 

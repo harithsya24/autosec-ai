@@ -84,21 +84,41 @@ class LogPreprocessor:
         return redacted
     
     def normalize_format(self, log: Dict[str, Any]) -> Dict[str, Any]:
-        normalized = {
-            'timestamp': self._parse_timestamp(log.get('Flow Start', datetime.now().isoformat())),  # use real column if exists
-            'source_ip': log.get('Src IP', 'unknown'),
-            'destination_ip': log.get('Dst IP', 'unknown'),
-            'user_id': log.get('Flow ID', f"{log.get('Src IP','')}_{log.get('Dst IP','')}"),
-            'action': log.get('Label', 'unknown').lower(),
-            'resource': log.get('Destination Port', 0),
-            'status': 'success' if log.get('Label','BENIGN') == 'BENIGN' else 'failed',
-            'protocol': log.get('Protocol', 'unknown').upper(),
-            'port': self._parse_int(log.get('Destination Port', 0)),
-            'bytes_sent': self._parse_int(log.get('Total Length of Fwd Packets', 0)),
-            'bytes_received': self._parse_int(log.get('Total Length of Bwd Packets', 0)),
-            'duration': self._parse_float(log.get('Flow Duration', 0.0)),
-            'metadata': {k: v for k, v in log.items() if k not in ['Flow Start','Src IP','Dst IP','Label','Protocol','Destination Port','Total Length of Fwd Packets','Total Length of Bwd Packets','Flow Duration','Flow ID']}
-        }
+        # Check if log is already in normalized format (has 'action' field)
+        if 'action' in log and 'source_ip' in log:
+            # Already normalized, just ensure all fields exist
+            normalized = {
+                'timestamp': self._parse_timestamp(log.get('timestamp', datetime.now())),
+                'source_ip': log.get('source_ip', 'unknown'),
+                'destination_ip': log.get('destination_ip', 'unknown'),
+                'user_id': log.get('user_id', 'unknown'),
+                'action': log.get('action', 'unknown'),
+                'resource': log.get('resource', 'unknown'),
+                'status': log.get('status', 'success'),
+                'protocol': log.get('protocol', 'TCP'),
+                'port': self._parse_int(log.get('port', 0)),
+                'bytes_sent': self._parse_int(log.get('bytes_sent', 0)),
+                'bytes_received': self._parse_int(log.get('bytes_received', 0)),
+                'duration': self._parse_float(log.get('duration', 0.0)),
+                'metadata': log.get('metadata', {})
+            }
+        else:
+            # CICIDS format - convert to normalized format
+            normalized = {
+                'timestamp': self._parse_timestamp(log.get('Flow Start', log.get('timestamp', datetime.now()))),
+                'source_ip': log.get('Src IP', log.get('source_ip', 'unknown')),
+                'destination_ip': log.get('Dst IP', log.get('destination_ip', 'unknown')),
+                'user_id': log.get('Flow ID', log.get('user_id', f"{log.get('Src IP', log.get('source_ip', ''))}_{log.get('Dst IP', log.get('destination_ip', ''))}")),
+                'action': log.get('Label', log.get('action', 'unknown')).lower(),
+                'resource': log.get('Destination Port', log.get('resource', 0)),
+                'status': 'success' if log.get('Label', log.get('status', 'BENIGN')) == 'BENIGN' else log.get('status', 'failed'),
+                'protocol': log.get('Protocol', log.get('protocol', 'unknown')).upper(),
+                'port': self._parse_int(log.get('Destination Port', log.get('port', 0))),
+                'bytes_sent': self._parse_int(log.get('Total Length of Fwd Packets', log.get('bytes_sent', 0))),
+                'bytes_received': self._parse_int(log.get('Total Length of Bwd Packets', log.get('bytes_received', 0))),
+                'duration': self._parse_float(log.get('Flow Duration', log.get('duration', 0.0))),
+                'metadata': log.get('metadata', {k: v for k, v in log.items() if k not in ['Flow Start','Src IP','Dst IP','Label','Protocol','Destination Port','Total Length of Fwd Packets','Total Length of Bwd Packets','Flow Duration','Flow ID','timestamp','source_ip','destination_ip','user_id','action','resource','status','protocol','port','bytes_sent','bytes_received','duration']})
+            }
         return normalized
 
 

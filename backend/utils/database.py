@@ -406,7 +406,11 @@ class StreamProcessor:
 
             except Exception as e:
                 self.stats['failed'] += 1
-                print(f" Failed to process log: {e}")
+                import traceback
+                error_msg = str(e) if str(e) else type(e).__name__
+                print(f" Failed to process log: {error_msg}")
+                if os.getenv("DEBUG", "").lower() == "true":
+                    traceback.print_exc()
 
     def _is_suspicious(self, log: Dict) -> bool:
         features = log.get('features', {})
@@ -452,20 +456,119 @@ class StreamProcessor:
 
 
 if __name__ == "__main__":
-    from backend.utils.preprocessor import LogPreprocessor, create_sample_logs
+    import sys
+    from pathlib import Path
+    # Add project root to path
+    project_root = Path(__file__).parent.parent.parent
+    sys.path.insert(0, str(project_root))
+    
+    from backend.utils.preprocessor import LogPreprocessor
+    from backend.utils.data_loader import CICIDSLoader
 
     db = SecurityLogDatabase()
     preprocessor = LogPreprocessor()
     stream = StreamProcessor(db, preprocessor)
     stream.start()
 
-    print(" Simulating log stream...")
-    sample_logs = create_sample_logs()
-
-    for i in range(3):
-        for log in sample_logs:
-            stream.submit_log(log)
+    print(" Loading real CICIDS data...")
+    # Load real CICIDS data from all available files
+    # Use absolute path to ensure we find the data directory
+    data_dir = project_root / "data" / "raw" / "cicids"
+    loader = CICIDSLoader(data_dir=str(data_dir))
+    
+    # List of all CICIDS files to process
+    cicids_files = [
+        "Monday-WorkingHours-pcap_ISCX.csv",
+        "Tuesday-WorkingHours-pcap_ISCX.csv",
+        "Wednesday-workingHours-pcap_ISCX.csv",
+        "Thursday-WorkingHours-Morning-WebAttacks-pcap_ISCX.csv",
+        "Thursday-WorkingHours-Afternoon-Infilteration-pcap_ISCX.csv",
+        "Friday-WorkingHours-Morning-pcap_ISCX.csv",
+        "Friday-WorkingHours-Afternoon-PortScan-pcap_ISCX.csv",
+        "Friday-WorkingHours-Afternoon-DDos-pcap_ISCX.csv"
+    ]
+    
+    try:
+        all_logs = []
+        total_loaded = 0
+        
+        # Load data from all available files
+        for filename in cicids_files:
+            try:
+                # Load each file (no sample_size limit to get all data)
+                df = loader.load_file(filename, sample_size=None)
+                if len(df) > 0:
+                    # Convert to dict format
+                    file_logs = df.to_dict('records')
+                    all_logs.extend(file_logs)
+                    total_loaded += len(file_logs)
+                    print(f"   Loaded {len(file_logs):,} records from {filename}")
+            except FileNotFoundError:
+                print(f"   Skipped {filename} (file not found)")
+                continue
+            except Exception as e:
+                print(f"   Skipped {filename}: {e}")
+                continue
+        
+        if not all_logs:
+            raise FileNotFoundError("No CICIDS files found")
+        
+        print(f"\n Total loaded: {total_loaded:,} real log records from CICIDS dataset")
+        print(f" Processing {len(all_logs):,} logs through stream...")
+        
+        # Process all logs through the stream efficiently
+        batch_size = 1000  # Process in larger batches for efficiency
+        processed_count = 0
+        
+        for i, raw_log in enumerate(all_logs, 1):
+            stream.submit_log(raw_log)
+            processed_count += 1
+            
+            # Progress update every batch_size logs
+            if i % batch_size == 0:
+                print(f"   Processed {i:,}/{len(all_logs):,} logs ({100*i/len(all_logs):.1f}%)...")
+                # Small pause to allow queue processing
+                time.sleep(0.1)
+        
+        # Wait for remaining logs to be processed
+        print(f"   Waiting for queue to empty...")
+        max_wait = 30  # Maximum wait time in seconds
+        wait_time = 0
+        while stream.queue.qsize() > 0 and wait_time < max_wait:
+            time.sleep(0.5)
+            wait_time += 0.5
+            if wait_time % 5 == 0:
+                print(f"   Queue size: {stream.queue.qsize()}, waiting...")
+        
+        print(f"   Completed processing all {len(all_logs):,} logs")
+            
+    except FileNotFoundError as e:
+        print(f" WARNING: CICIDS data files not found!")
+        print(f"   Error: {e}")
+        print("   Expected location: data/raw/cicids/*.csv")
+        print("   Using minimal test data instead...")
+        # Fallback: minimal real-format test data
+        test_log = {
+            "Flow Start": datetime.now().isoformat(),
+            "Src IP": "192.168.1.100",
+            "Dst IP": "10.0.0.1",
+            "Label": "BENIGN",
+            "Protocol": "TCP",
+            "Destination Port": 443,
+            "Total Length of Fwd Packets": 1000,
+            "Total Length of Bwd Packets": 2000,
+            "Flow Duration": 1000000
+        }
+        for i in range(5):
+            stream.submit_log(test_log.copy())
             time.sleep(0.1)
+    except Exception as e:
+        print(f" Error loading CICIDS data: {e}")
+        import traceback
+        traceback.print_exc()
+        print("   Check that data files exist in data/raw/cicids/")
+        stream.stop()
+        sys.exit(1)
 
     time.sleep(2)
 

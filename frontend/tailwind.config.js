@@ -7,17 +7,31 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Professional blue color palette (Datadog-style without purple)
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        // Datadog purple/blue
+        datadog: {
+          50: '#f3f4f6',
+          100: '#e5e7eb',
+          200: '#d1d5db',
+          300: '#9ca3af',
+          400: '#6b7280',
+          500: '#4b5563',
+          600: '#374151',
+          700: '#1f2937',
+          800: '#111827',
+          900: '#0a0e1a',
         },
         danger: {
           50: '#fef2f2',
@@ -56,9 +70,13 @@ export default {
           900: '#14532d',
         },
       },
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+      },
     },
   },
   plugins: [],
 }
+
 
 

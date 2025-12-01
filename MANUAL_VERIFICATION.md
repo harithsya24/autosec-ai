@@ -4,11 +4,11 @@ Use this checklist to manually verify each component of AutoSec AI.
 
 ## Prerequisites
 
-- [ ] Python virtual environment activated
-- [ ] All dependencies installed (`pip install -r requirements.txt`)
-- [ ] CICIDS dataset in `data/raw/cicids/`
-- [ ] Backend can start without errors
-- [ ] Frontend can start without errors
+- [Y] Python virtual environment activated
+- [Y] All dependencies installed (`pip install -r requirements.txt`)
+- [Y] CICIDS dataset in `data/raw/cicids/`
+- [Y] Backend can start without errors
+- [Y] Frontend can start without errors
 
 ---
 
@@ -25,9 +25,9 @@ print("Database initialized successfully")
 ```
 
 **Check:**
-- [ ] Database file exists at `data/security_logs.db`
-- [ ] No errors during initialization
-- [ ] Can insert a test record
+- [Y] Database file exists at `data/security_logs.db`
+- [Y] No errors during initialization
+- [Y] Can insert a test record
 
 ---
 
@@ -49,9 +49,9 @@ if stats['threats'] == 0:
 ```
 
 **Check:**
-- [ ] Vector store directory exists
-- [ ] Collections have documents (or can be initialized)
-- [ ] Can search and retrieve results
+- [Y] Vector store directory exists
+- [Y] Collections have documents (or can be initialized)
+- [Y] Can search and retrieve results
 
 ---
 
@@ -66,9 +66,9 @@ print(f"Trained: {agent.is_trained}")  # Should be False initially
 ```
 
 **Check:**
-- [ ] Agent initializes without errors
-- [ ] Model and scaler are created
-- [ ] Can call training methods
+- [Y] Agent initializes without errors
+- [Y] Model and scaler are created
+- [Y] Can call training methods
 
 ---
 
@@ -771,4 +771,5 @@ System is working correctly if:
 ---
 
 Use this checklist to systematically verify every component!
+
 

@@ -173,7 +173,7 @@ class OrchestratorAgent:
                     "description": action.get("description", ""),
                     "parameters": action.get("parameters", {}),
                     "requires_approval": True
-                })
+            })
         
         # Combine everything
         return {

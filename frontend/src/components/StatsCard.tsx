@@ -21,20 +21,21 @@ export default function StatsCard({
   }
 
   return (
-    <div className="card">
+    <div className="card hover:shadow-md">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+        <div className="flex-1">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{title}</p>
+          <p className="text-3xl font-bold text-gray-900">{value}</p>
         </div>
         <div
-          className={`p-3 rounded-lg border ${colorClasses[color]}`}
+          className={`p-3 rounded-lg border-2 ${colorClasses[color]}`}
         >
-          <Icon className="h-6 w-6" />
+          <Icon className="h-5 w-5" />
         </div>
       </div>
     </div>
   )
 }
+
 
 

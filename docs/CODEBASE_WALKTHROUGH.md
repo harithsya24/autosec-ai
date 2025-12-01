@@ -1,6 +1,6 @@
 # AutoSec AI - Complete Codebase Walkthrough
 
-## 📋 Table of Contents
+##  Table of Contents
 
 1. [System Overview](#system-overview)
 2. [Architecture Flow](#architecture-flow)
@@ -11,7 +11,7 @@
 
 ---
 
-## 🎯 System Overview
+##  System Overview
 
 **AutoSec AI** is an autonomous security system that:
 1. **Detects** threats in network logs using ML
@@ -22,22 +22,22 @@
 
 ---
 
-## 🏗️ Architecture Flow
+##  Architecture Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    USER / SECURITY ANALYST                   │
+│                    USER / SECURITY ANALYST                  │
 │              (Dashboard at http://localhost:3000)           │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          │ HTTP Requests / WebSocket
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    FASTAPI BACKEND                            │
-│              (backend/api/main.py)                           │
-│  - REST API Endpoints                                        │
-│  - WebSocket Server                                          │
-│  - Request Routing                                           │
+│                    FASTAPI BACKEND                          │
+│              (backend/api/main.py)                          │
+│  - REST API Endpoints                                       │
+│  - WebSocket Server                                         │
+│  - Request Routing                                          │
 └────────────────────────┬────────────────────────────────────┘
                          │
          ┌───────────────┼───────────────┐
@@ -50,27 +50,27 @@
        │ Coordinates workflow
        ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    AI AGENT PIPELINE                         │
-│                                                               │
-│  Step 1: Log Analyzer Agent                                  │
-│  ├─ Input: Raw log data                                      │
+│                    AI AGENT PIPELINE                        │
+│                                                             │
+│  Step 1: Log Analyzer Agent                                 │
+│  ├─ Input: Raw log data                                     │
 │  ├─ Process: Isolation Forest anomaly detection             │
-│  └─ Output: Anomaly score + severity                         │
-│                                                               │
+│  └─ Output: Anomaly score + severity                        │
+│                                                             │
 │  Step 2: Threat Intelligence Agent                          │
-│  ├─ Input: Detected anomaly                                  │
+│  ├─ Input: Detected anomaly                                 │
 │  ├─ Process: RAG retrieval + LLM reasoning                  │
-│  └─ Output: Threat explanation + confidence                │
-│                                                               │
-│  Step 3: Response Agent                                      │
-│  ├─ Input: Threat analysis                                   │
+│  └─ Output: Threat explanation + confidence                 │
+│                                                             │
+│  Step 3: Response Agent                                     │
+│  ├─ Input: Threat analysis                                  │
 │  ├─ Process: Traffic light classification                   │
-│  └─ Output: Action recommendations (Green/Yellow/Red)     │
-│                                                               │
-│  Step 4: Action Executor                                     │
-│  ├─ Input: Recommended actions                               │
+│  └─ Output: Action recommendations (Green/Yellow/Red)       │
+│                                                             │
+│  Step 4: Action Executor                                    │
+│  ├─ Input: Recommended actions                              │
 │  ├─ Process: Execute green/yellow, queue red                │
-│  └─ Output: Execution results                              │
+│  └─ Output: Execution results                               │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -1282,14 +1282,14 @@ open http://localhost:3000
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. LOG INGESTION                                            │
 │    POST /api/v1/analyze                                     │
-│    {timestamp, source_ip, action, status, ...}             │
-└────────────────────────┬──────────────────────────────────┘
+│    {timestamp, source_ip, action, status, ...}              │
+└────────────────────────┬─────────────────────────────────--─┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 2. ORCHESTRATOR RECEIVES                                    │
 │    orchestrator.analyze_log(raw_log)                        │
-└────────────────────────┬──────────────────────────────────┘
+└────────────────────────┬────────────────────────────────--──┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -1299,8 +1299,8 @@ open http://localhost:3000
 │    - Run Isolation Forest                                   │
 │    - Get anomaly score (-1 to +1)                           │
 │    - Classify severity                                      │
-│    Output: {anomaly_score: -0.85, severity: "high", ...}  │
-└────────────────────────┬──────────────────────────────────┘
+│    Output: {anomaly_score: -0.85, severity: "high", ...}    │
+└────────────────────────┬───────────────────────────────--───┘
                          │
                          ▼ (if anomaly detected)
 ┌─────────────────────────────────────────────────────────────┐
@@ -1312,20 +1312,20 @@ open http://localhost:3000
 │      • Historical incidents                                 │
 │    - LLM: Generate explanation (if available)               │
 │    - Calculate confidence                                   │
-│    Output: {threat_type, explanation, confidence, ...}     │
-└────────────────────────┬──────────────────────────────────┘
+│    Output: {threat_type, explanation, confidence, ...}      │
+└────────────────────────┬────────────────────────────────--──┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
 │ 5. RESPONSE AGENT                                           │
 │    - Check threat severity                                  │
 │    - Check confidence                                       │
-│    - Classify actions (Traffic Light)                      │
+│    - Classify actions (Traffic Light)                       │
 │      • GREEN: Safe actions                                  │
 │      • YELLOW: Low-risk actions                             │
 │      • RED: High-risk actions                               │
-│    Output: {actions: {green: [...], yellow: [...], red: [...]}}│
-└────────────────────────┬──────────────────────────────────┘
+│ Output: {actions: {green: [...], yellow: [...], red: [...]}}│
+└────────────────────────┬─────────────────────────────--─────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -1335,7 +1335,7 @@ open http://localhost:3000
 │    - Queue RED actions for approval                         │
 │    - Store all in database                                  │
 │    Output: {executed_actions: [...], pending_actions: [...]}│
-└────────────────────────┬──────────────────────────────────┘
+└────────────────────────┬────────────────────────--──────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -1343,7 +1343,7 @@ open http://localhost:3000
 │    - Insert threat to threats table                         │
 │    - Store complete analysis                                │
 │    - Track actions                                          │
-└────────────────────────┬──────────────────────────────────┘
+└────────────────────────┬──────────────────────────────────--┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -1351,7 +1351,7 @@ open http://localhost:3000
 │    - Broadcast threat_detected event                        │
 │    - Broadcast action_executed event                        │
 │    - Real-time dashboard updates                            │
-└────────────────────────┬──────────────────────────────────┘
+└────────────────────────┬─────────────────────────────────--─┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐

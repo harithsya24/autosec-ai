@@ -57,20 +57,84 @@ export default function ThreatDetail() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{threat.threat_type}</h1>
-          <p className="text-gray-600 mt-1">
+        <div className="flex-1">
+          <div className="flex items-center space-x-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900">{threat.threat_type}</h1>
+            <span className={`badge ${
+              threat.severity === 'critical' || threat.severity === 'high' 
+                ? 'badge-danger' 
+                : threat.severity === 'medium' 
+                ? 'badge-warning' 
+                : 'badge-success'
+            }`}>
+              {threat.severity.toUpperCase()}
+            </span>
+            <span className={`badge ${
+              threat.confidence >= 0.9 
+                ? 'badge-danger' 
+                : threat.confidence >= 0.7 
+                ? 'badge-warning' 
+                : 'badge-success'
+            }`}>
+              {Math.round(threat.confidence * 100)}% Confidence
+            </span>
+          </div>
+          <p className="text-gray-600">
             Detected {formatDistanceToNow(new Date(threat.timestamp), { addSuffix: true })}
           </p>
         </div>
+      </div>
+
+      {/* Threat Overview */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4">Threat Overview</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-sm text-gray-500">Source IP</p>
+            <p className="font-medium text-gray-900">
+              {threat.affected_resources?.[0]?.split('/')[0] || 'Unknown'}
+            </p>
+          </div>
+          {threat.anomaly_score && (
+            <div>
+              <p className="text-sm text-gray-500">Anomaly Score</p>
+              <p className="font-medium text-gray-900">
+                {threat.anomaly_score.toFixed(3)}
+              </p>
+            </div>
+          )}
+          {threat.matched_techniques && threat.matched_techniques.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-500">MITRE Techniques</p>
+              <p className="font-medium text-gray-900">
+                {threat.matched_techniques.join(', ')}
+              </p>
+            </div>
+          )}
+          {threat.affected_resources && threat.affected_resources.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-500">Affected Resources</p>
+              <p className="font-medium text-gray-900 text-sm">
+                {threat.affected_resources[0]}
+              </p>
+            </div>
+          )}
+        </div>
+        {threat.description && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-500 mb-2">Description</p>
+            <p className="text-gray-700">{threat.description}</p>
+          </div>
+        )}
       </div>
 
       {/* Threat Analysis */}
       {threat.threat_analysis && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">AI Reasoning Chain</h2>
-          <div className="space-y-4">
-            {threat.threat_analysis.reasoning_chain.map((step, idx) => (
+          {threat.threat_analysis.reasoning_chain && threat.threat_analysis.reasoning_chain.length > 0 ? (
+            <div className="space-y-4">
+              {threat.threat_analysis.reasoning_chain.map((step, idx) => (
               <div key={idx} className="border-l-4 border-primary-500 pl-4">
                 <div className="flex items-center space-x-2 mb-2">
                   <span className="font-semibold text-gray-900">Step {step.step}: {step.name}</span>
@@ -86,15 +150,20 @@ export default function ThreatDetail() {
                 )}
                 <p className="text-gray-600 text-sm mt-2">{step.result}</p>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-gray-500 text-sm">
+              Reasoning chain not available for this threat.
+            </div>
+          )}
         </div>
       )}
 
       {/* Retrieved Context */}
-      {threat.threat_analysis?.retrieved_context && (
+      {threat.threat_analysis?.retrieved_context && threat.threat_analysis.retrieved_context.length > 0 ? (
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Retrieved Context</h2>
+          <h2 className="text-lg font-semibold mb-4">Retrieved Context (RAG)</h2>
           <div className="space-y-3">
             {threat.threat_analysis.retrieved_context.map((context, idx) => (
               <div
@@ -124,10 +193,17 @@ export default function ThreatDetail() {
             ))}
           </div>
         </div>
+      ) : threat.threat_analysis && (
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4">Retrieved Context (RAG)</h2>
+          <div className="text-gray-500 text-sm">
+            No retrieved context available for this threat.
+          </div>
+        </div>
       )}
 
       {/* Confidence Breakdown */}
-      {threat.threat_analysis?.confidence_breakdown && (
+      {threat.threat_analysis?.confidence_breakdown ? (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Confidence Breakdown</h2>
           <div className="space-y-3">
@@ -197,18 +273,87 @@ export default function ThreatDetail() {
             </div>
           </div>
         </div>
+      ) : (
+        <div className="card">
+          <h2 className="text-lg font-semibold mb-4">Confidence Breakdown</h2>
+          <div className="text-gray-500 text-sm">
+            Confidence breakdown not available. Overall confidence: {Math.round(threat.confidence * 100)}%
+          </div>
+        </div>
       )}
 
       {/* Actions */}
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Recommended Actions</h2>
-        <div className="space-y-4">
-          {threat.executed_actions?.map((action) => (
-            <ActionItem key={action.action_id} action={action} executed />
-          ))}
-          {threat.pending_actions?.map((action) => (
-            <ActionItem key={action.action_id} action={action} />
-          ))}
+        {((threat.executed_actions && threat.executed_actions.length > 0) || 
+          (threat.pending_actions && threat.pending_actions.length > 0)) ? (
+          <div className="space-y-4">
+            {threat.executed_actions && threat.executed_actions.length > 0 && (
+              <>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Executed Actions</h3>
+                {threat.executed_actions.map((action) => (
+                  <ActionItem key={action.action_id} action={action} executed />
+                ))}
+              </>
+            )}
+            {threat.pending_actions && threat.pending_actions.length > 0 && (
+              <>
+                <h3 className="text-sm font-medium text-gray-700 mb-2 mt-4">Pending Approval</h3>
+                {threat.pending_actions.map((action) => (
+                  <ActionItem key={action.action_id} action={action} />
+                ))}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="text-gray-500 text-sm">
+            No actions recommended for this threat.
+          </div>
+        )}
+      </div>
+
+      {/* Additional Details */}
+      <div className="card">
+        <h2 className="text-lg font-semibold mb-4">Additional Details</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <p className="text-sm text-gray-500">Alert ID</p>
+            <p className="font-mono text-sm text-gray-900">{threat.alert_id}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Detection Timestamp</p>
+            <p className="text-sm text-gray-900">
+              {new Date(threat.timestamp).toLocaleString()}
+            </p>
+          </div>
+          {threat.matched_techniques && threat.matched_techniques.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-500">MITRE ATT&CK Techniques</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {threat.matched_techniques.map((tech) => (
+                  <a
+                    key={tech}
+                    href={`https://attack.mitre.org/techniques/${tech.replace('T', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="badge badge-info text-xs"
+                  >
+                    {tech}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+          {threat.affected_resources && threat.affected_resources.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-500">Affected Resources</p>
+              <ul className="text-sm text-gray-900 mt-1 list-disc list-inside">
+                {threat.affected_resources.map((resource, idx) => (
+                  <li key={idx}>{resource}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -293,5 +438,6 @@ function ActionItem({ action, executed = false }: { action: Action; executed?: b
     </div>
   )
 }
+
 
 

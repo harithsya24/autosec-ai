@@ -58,6 +58,43 @@ export interface Action {
   executed_by?: string
   rollback_info?: RollbackInfo
   requires_approval: boolean
+  threat_context?: ThreatContext
+}
+
+export interface ThreatContext {
+  threat_type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  confidence: number
+  mitre_technique: string
+  target_system: string
+  affected_resource: string
+  affected_user: string
+  user_email?: string
+  source_ip: string
+  attack_vector: string
+  timeline: TimelineEvent[]
+  risk_assessment: RiskAssessment
+  ai_reasoning: string
+  evidence: Evidence
+  detected_at: string
+}
+
+export interface TimelineEvent {
+  time: string
+  event: string
+  status: 'normal' | 'warning' | 'danger' | 'critical'
+}
+
+export interface RiskAssessment {
+  risk: string
+  data_at_risk: string
+  compliance: string
+  impact: string
+}
+
+export interface Evidence {
+  raw_log: Record<string, any>
+  anomaly_detection: Record<string, any>
 }
 
 export interface RollbackInfo {
@@ -110,5 +147,6 @@ export interface ComplianceMetrics {
   actions_approved: number
   actions_rejected: number
 }
+
 
 

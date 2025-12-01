@@ -4,13 +4,27 @@ Generates automated compliance reports using LLM-powered analysis
 """
 
 import os
+import sys
 from datetime import datetime, timedelta
 from typing import Dict, List, Any
+from pathlib import Path
 import json
+
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (3 levels up from backend/agents/)
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    pass  # python-dotenv not installed, use system env vars only
 
 try:
     from langchain_openai import ChatOpenAI
-    from langchain.prompts import ChatPromptTemplate
+    from langchain_core.prompts import ChatPromptTemplate
     LLM_AVAILABLE = True
 except ImportError:
     LLM_AVAILABLE = False
@@ -22,10 +36,20 @@ class ComplianceAgent:
     def __init__(self):
         self.llm = None
         if LLM_AVAILABLE and os.getenv("OPENAI_API_KEY"):
-            self.llm = ChatOpenAI(
-                model="gpt-4-turbo-preview",
-                temperature=0.3,
-            )
+            try:
+                self.llm = ChatOpenAI(
+                    model="gpt-4o-mini",  # Use same model as threat intelligence agent
+                    temperature=0.3,
+                )
+                print("Compliance Agent: LLM initialized")
+            except Exception as e:
+                print(f"Compliance Agent: Failed to initialize LLM: {e}")
+                self.llm = None
+        else:
+            if not LLM_AVAILABLE:
+                print("Compliance Agent: LangChain not available, using template mode")
+            elif not os.getenv("OPENAI_API_KEY"):
+                print("Compliance Agent: OPENAI_API_KEY not set, using template mode")
     
     async def generate_report(
         self,
@@ -91,20 +115,21 @@ class ComplianceAgent:
             ''', (start_date, end_date))
             
             action_row = cursor.fetchone()
-            total_actions = action_row[0] if action_row else 0
-            approved = action_row[1] if action_row else 0
-            rejected = action_row[2] if action_row else 0
+            # Handle None values from database (SUM returns None if no rows)
+            total_actions = (action_row[0] if action_row and action_row[0] is not None else 0) or 0
+            approved = (action_row[1] if action_row and action_row[1] is not None else 0) or 0
+            rejected = (action_row[2] if action_row and action_row[2] is not None else 0) or 0
             
             conn.close()
             
             return {
-                "total_incidents": total_actions,  # Approximate
-                "incidents_resolved": approved,
-                "false_positives": rejected,
+                "total_incidents": int(total_actions),
+                "incidents_resolved": int(approved),
+                "false_positives": int(rejected),
                 "average_response_time": 250,  # Mock value
-                "actions_taken": total_actions,
-                "actions_approved": approved,
-                "actions_rejected": rejected,
+                "actions_taken": int(total_actions),
+                "actions_approved": int(approved),
+                "actions_rejected": int(rejected),
             }
         except Exception as e:
             print(f"Error getting metrics: {e}")
@@ -162,26 +187,45 @@ class ComplianceAgent:
         ])
         
         try:
-            chain = prompt_template | self.llm
-            response = await chain.ainvoke({
-                "report_type": report_type.upper(),
-                "start_date": start_date,
-                "end_date": end_date,
-                "metrics": json.dumps(metrics, indent=2)
-            })
+            messages = prompt_template.format_messages(
+                report_type=report_type.upper(),
+                start_date=start_date,
+                end_date=end_date,
+                metrics=json.dumps(metrics, indent=2)
+            )
+            response = await self.llm.ainvoke(messages)
             
             # Parse LLM response
-            content = response.content
+            if hasattr(response, 'content'):
+                content = response.content
+            elif isinstance(response, str):
+                content = response
+            else:
+                content = str(response)
+            
             # Try to extract JSON from response
             if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
+                content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
+                content = content.split("```")[1].split("```")[0].strip()
+            
+            # Try to find JSON object in response
+            import re
+            json_match = re.search(r'\{.*"sections".*\}', content, re.DOTALL)
+            if json_match:
+                content = json_match.group(0)
             
             parsed = json.loads(content)
             return parsed.get("sections", [])
+        except json.JSONDecodeError as e:
+            print(f"LLM JSON parsing error: {e}")
+            if 'content' in locals():
+                print(f"Response content: {content[:500]}...")
+            return self._generate_template(report_type, metrics, start_date, end_date)
         except Exception as e:
             print(f"LLM generation error: {e}")
+            import traceback
+            traceback.print_exc()
             return self._generate_template(report_type, metrics, start_date, end_date)
     
     def _generate_template(
@@ -205,10 +249,10 @@ class ComplianceAgent:
                 detection and mitigation capabilities.
                 """,
                 "findings": [
-                    f"Total incidents detected: {metrics['total_incidents']}",
-                    f"Incidents resolved: {metrics['incidents_resolved']}",
-                    f"False positive rate: {metrics['false_positives'] / max(metrics['total_incidents'], 1) * 100:.1f}%",
-                    f"Average response time: {metrics['average_response_time']}ms"
+                    f"Total incidents detected: {metrics.get('total_incidents', 0) or 0}",
+                    f"Incidents resolved: {metrics.get('incidents_resolved', 0) or 0}",
+                    f"False positive rate: {(metrics.get('false_positives', 0) or 0) / max(metrics.get('total_incidents', 0) or 1, 1) * 100:.1f}%",
+                    f"Average response time: {metrics.get('average_response_time', 0) or 0}ms"
                 ],
                 "recommendations": [
                     "Continue monitoring false positive rates and adjust detection thresholds as needed",
@@ -220,15 +264,15 @@ class ComplianceAgent:
                 "title": "Threat Detection & Response",
                 "content": f"""
                 The autonomous threat detection system successfully identified and classified 
-                security threats using AI-powered analysis. {metrics['actions_taken']} mitigation 
-                actions were executed, with {metrics['actions_approved']} approved and executed 
+                security threats using AI-powered analysis. {metrics.get('actions_taken', 0) or 0} mitigation 
+                actions were executed, with {metrics.get('actions_approved', 0) or 0} approved and executed 
                 automatically or with human approval. The system's traffic light classification 
                 (green/yellow/red) ensured appropriate risk management for all actions.
                 """,
                 "findings": [
-                    f"Total actions taken: {metrics['actions_taken']}",
-                    f"Actions approved: {metrics['actions_approved']}",
-                    f"Actions rejected: {metrics['actions_rejected']}",
+                    f"Total actions taken: {metrics.get('actions_taken', 0) or 0}",
+                    f"Actions approved: {metrics.get('actions_approved', 0) or 0}",
+                    f"Actions rejected: {metrics.get('actions_rejected', 0) or 0}",
                     "All high-risk actions required human approval"
                 ],
                 "recommendations": [
@@ -282,13 +326,18 @@ class ComplianceAgent:
     
     def _generate_summary(self, metrics: Dict[str, Any], report_type: str) -> str:
         """Generate executive summary"""
+        total_incidents = metrics.get('total_incidents', 0) or 0
+        false_positives = metrics.get('false_positives', 0) or 0
+        actions_taken = metrics.get('actions_taken', 0) or 0
+        avg_response = metrics.get('average_response_time', 0) or 0
+        
+        false_positive_rate = (false_positives / max(total_incidents, 1)) * 100 if total_incidents > 0 else 0.0
+        
         return f"""
-        This {report_type.upper()} compliance report covers the period from {metrics.get('period_start', 'N/A')} 
-        to {metrics.get('period_end', 'N/A')}. During this period, the AutoSec AI system detected 
-        {metrics['total_incidents']} security incidents and executed {metrics['actions_taken']} mitigation 
-        actions. The system maintained high detection accuracy with a false positive rate of 
-        {metrics['false_positives'] / max(metrics['total_incidents'], 1) * 100:.1f}% and an average 
-        response time of {metrics['average_response_time']}ms. All high-risk actions required human 
-        approval, ensuring appropriate oversight and compliance with security policies.
+        This {report_type.upper()} compliance report covers the reporting period. During this period, 
+        the AutoSec AI system detected {total_incidents} security incidents and executed {actions_taken} 
+        mitigation actions. The system maintained high detection accuracy with a false positive rate of 
+        {false_positive_rate:.1f}% and an average response time of {avg_response}ms. All high-risk actions 
+        required human approval, ensuring appropriate oversight and compliance with security policies.
         """
 

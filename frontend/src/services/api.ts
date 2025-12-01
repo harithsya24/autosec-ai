@@ -104,6 +104,56 @@ export const complianceService = {
   },
 }
 
+export const simulationService = {
+  start: async (): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/start')
+    return response.data
+  },
+
+  startDemo: async (durationMinutes: number = 5): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/start-demo', {
+      duration_minutes: durationMinutes,
+    })
+    return response.data
+  },
+
+  stop: async (): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/stop')
+    return response.data
+  },
+
+  getStatus: async (): Promise<any> => {
+    const response = await api.get('/api/v1/simulation/status')
+    return response.data
+  },
+
+  updateConfig: async (config: {
+    interval_seconds?: number
+    enabled_threats?: string[]
+    auto_clear_low_priority?: boolean
+    clear_after_seconds?: number
+  }): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/config', config)
+    return response.data
+  },
+
+  generateNextThreat: async (): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/next-threat')
+    return response.data
+  },
+
+  getThreats: async (): Promise<any> => {
+    const response = await api.get('/api/v1/simulation/threats')
+    return response.data
+  },
+
+  clearThreats: async (): Promise<any> => {
+    const response = await api.post('/api/v1/simulation/clear')
+    return response.data
+  },
+}
+
 export default api
+
 
 

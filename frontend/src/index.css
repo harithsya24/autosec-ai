@@ -1,49 +1,144 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  * {
+    @apply border-gray-200;
+  }
+  
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-gray-900;
   }
 }
 
 @layer components {
+  /* Datadog-inspired card styling */
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+    @apply bg-white rounded-lg border border-gray-200 p-6 shadow-sm;
+    transition: all 0.2s ease;
   }
   
+  .card:hover {
+    @apply shadow-md border-gray-300;
+  }
+  
+  /* Datadog-style buttons */
   .btn-primary {
-    @apply bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors font-medium;
+    @apply bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700 
+           transition-all font-medium text-sm shadow-sm hover:shadow-md;
   }
   
   .btn-secondary {
-    @apply bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium;
+    @apply bg-white text-gray-700 px-4 py-2 rounded-md border border-gray-300 
+           hover:bg-gray-50 transition-all font-medium text-sm shadow-sm hover:shadow-md;
   }
   
   .btn-danger {
-    @apply bg-danger-600 text-white px-4 py-2 rounded-lg hover:bg-danger-700 transition-colors font-medium;
+    @apply bg-danger-600 text-white px-4 py-2 rounded-md hover:bg-danger-700 
+           transition-all font-medium text-sm shadow-sm hover:shadow-md;
   }
   
+  .btn-ghost {
+    @apply bg-transparent text-gray-600 px-4 py-2 rounded-md hover:bg-gray-100 
+           transition-all font-medium text-sm;
+  }
+  
+  /* Datadog-style badges */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold;
+    letter-spacing: 0.025em;
   }
   
   .badge-success {
-    @apply bg-success-100 text-success-800;
+    @apply bg-success-50 text-success-700 border border-success-200;
   }
   
   .badge-warning {
-    @apply bg-warning-100 text-warning-800;
+    @apply bg-warning-50 text-warning-700 border border-warning-200;
   }
   
   .badge-danger {
-    @apply bg-danger-100 text-danger-800;
+    @apply bg-danger-50 text-danger-700 border border-danger-200;
   }
   
   .badge-info {
-    @apply bg-primary-100 text-primary-800;
+    @apply bg-primary-50 text-primary-700 border border-primary-200;
+  }
+  
+  .badge-gray {
+    @apply bg-gray-100 text-gray-700 border border-gray-300;
+  }
+  
+  /* Datadog-style status indicators */
+  .status-indicator {
+    @apply inline-flex items-center;
+  }
+  
+  .status-dot {
+    @apply h-2 w-2 rounded-full mr-2;
+  }
+  
+  .status-dot-success {
+    @apply bg-success-500;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+  }
+  
+  .status-dot-warning {
+    @apply bg-warning-500;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  }
+  
+  .status-dot-danger {
+    @apply bg-danger-500;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+  }
+  
+  .status-dot-gray {
+    @apply bg-gray-400;
+    box-shadow: 0 0 0 3px rgba(156, 163, 175, 0.1);
   }
 }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.5s ease-out;
+}
+
+/* Datadog-style scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
 
 

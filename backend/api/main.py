@@ -13,6 +13,7 @@ import os
 import sys
 import json
 import asyncio
+import random
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -22,6 +23,15 @@ sys.path.append(str(Path(__file__).parent.parent))
 # Import AI Agents
 from agents.log_analyzer import LogAnalyzerAgent
 from agents.orchestrator import OrchestratorAgent
+
+# Import Simulation Routes
+try:
+    from backend.api.simulation_routes import router as simulation_router
+    from backend.simulation.threat_simulator import ThreatSimulator
+    SIMULATION_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: Simulation module not available: {e}")
+    SIMULATION_AVAILABLE = False
 
 # Load environment variables
 load_dotenv()
@@ -74,6 +84,175 @@ class ConnectionManager:
                 pass
 
 manager = ConnectionManager()
+
+# ============================================================================
+# Simulation Setup
+# ============================================================================
+simulator = None
+
+async def on_threat_detected_callback(threat_result: Dict):
+    """Callback when simulator detects a threat - saves to DB and broadcasts"""
+    global manager
+    
+    threat_type = threat_result.get('threat_analysis', {}).get('threat_type', 'unknown')
+    severity = threat_result.get('anomaly', {}).get('severity', 'unknown')
+    confidence = threat_result.get('threat_analysis', {}).get('confidence', 0.0)
+    
+    # Generate alert_id if not present
+    if "alert_id" not in threat_result:
+        alert_id = f"sim_{int(datetime.now().timestamp() * 1000)}"
+        threat_result["alert_id"] = alert_id
+    else:
+        alert_id = threat_result["alert_id"]
+    
+    # Save to database
+    try:
+        from backend.utils.database import SecurityLogDatabase
+        db = SecurityLogDatabase()
+        
+        anomaly = threat_result.get("anomaly", {})
+        threat_analysis = threat_result.get("threat_analysis", {})
+        
+        matched_techniques = threat_analysis.get("matched_techniques", [])
+        if isinstance(matched_techniques, list):
+            matched_techniques_str = ",".join(matched_techniques)
+        else:
+            matched_techniques_str = str(matched_techniques) if matched_techniques else ""
+        
+        # Parse timestamp
+        timestamp_str = anomaly.get("timestamp")
+        if isinstance(timestamp_str, str):
+            try:
+                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            except:
+                timestamp = datetime.now()
+        else:
+            timestamp = timestamp_str if timestamp_str else datetime.now()
+        
+        # Prepare threat data for database
+        threat_data = {
+            "alert_id": alert_id,
+            "timestamp": timestamp,
+            "severity": anomaly.get("severity", "medium"),
+            "confidence": threat_analysis.get("confidence", 0.0),
+            "threat_type": threat_analysis.get("threat_type", "unknown"),
+            "description": threat_analysis.get("explanation", ""),
+            "anomaly_score": anomaly.get("anomaly_score", 0.0),
+            "source_ip": anomaly.get("source_ip", ""),
+            "user_id": anomaly.get("user_id", ""),
+            "resource": anomaly.get("resource", ""),
+            "status": anomaly.get("status", ""),
+            "threat_analysis": threat_analysis,
+            "recommended_actions": threat_result.get("recommended_actions", {}),
+            "executed_actions": threat_result.get("executed_actions", []),
+            "pending_actions": threat_result.get("pending_actions", []),
+            "matched_techniques": matched_techniques_str.split(",") if matched_techniques_str else [],
+            "affected_resources": [anomaly.get("resource", "")] if anomaly.get("resource") else []
+        }
+        
+        db.insert_threat(threat_data)
+        print(f"  ✓ Saved to database: {alert_id}")
+        
+        # Save actions to actions table so they appear on Actions page
+        try:
+            from backend.agents.action_executor import ActionExecutor, ActionStatus
+            import sqlite3
+            action_executor = ActionExecutor(sandbox_mode=True)
+            
+            # Save pending actions (RED tier - require approval)
+            pending_actions = threat_result.get("pending_actions", [])
+            for action in pending_actions:
+                action_id = action.get("action_id") or action.get("id") or f"action_{int(datetime.now().timestamp() * 1000)}_{random.randint(1000, 9999)}"
+                action_type = action.get("type", "block_ip")
+                tier = action.get("tier", "red")
+                
+                # Store threat context in action parameters
+                threat_context = action.get("threat_context", {})
+                if threat_context:
+                    action["parameters"]["threat_context"] = threat_context
+                    action["parameters"]["alert_id"] = alert_id
+                
+                # Create action record in database
+                action_executor._create_action_record(
+                    action_id=action_id,
+                    action_type=action_type,
+                    tier=tier,
+                    action=action,
+                    threat_alert_id=None
+                )
+                print(f"  ✓ Saved pending action: {action_id} ({tier.upper()})")
+            
+            # Save executed actions (GREEN/YELLOW - auto-executed) to history
+            executed_actions = threat_result.get("executed_actions", [])
+            for action in executed_actions:
+                action_id = action.get("action_id") or action.get("id") or f"action_{int(datetime.now().timestamp() * 1000)}_{random.randint(1000, 9999)}"
+                action_type = action.get("type", "log_event")
+                tier = action.get("tier", "green")
+                
+                # Create action record
+                action_executor._create_action_record(
+                    action_id=action_id,
+                    action_type=action_type,
+                    tier=tier,
+                    action=action,
+                    threat_alert_id=None
+                )
+                # Update status to completed and set timestamps
+                conn = action_executor._get_connection()
+                try:
+                    cursor = conn.cursor()
+                    cursor.execute('''
+                        UPDATE actions 
+                        SET status = ?, executed_at = ?, completed_at = ?
+                        WHERE action_id = ?
+                    ''', (ActionStatus.COMPLETED.value, datetime.now(), datetime.now(), action_id))
+                    conn.commit()
+                finally:
+                    conn.close()
+                print(f"  ✓ Saved executed action: {action_id} ({tier.upper()})")
+                
+        except Exception as e:
+            print(f"  Warning: Failed to save actions: {e}")
+            import traceback
+            traceback.print_exc()
+        
+    except Exception as e:
+        print(f"Warning: Failed to save simulated threat to database: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # Broadcast via WebSocket
+    try:
+        if manager:
+            # Format threat for frontend
+            frontend_threat = {
+                "alert_id": alert_id,
+                "severity": anomaly.get("severity", "medium"),
+                "confidence": threat_analysis.get("confidence", 0.0),
+                "threat_type": threat_analysis.get("threat_type", "unknown"),
+                "description": threat_analysis.get("explanation", ""),
+                "timestamp": timestamp.isoformat() if isinstance(timestamp, datetime) else str(timestamp),
+                "affected_resources": [anomaly.get("resource", "")] if anomaly.get("resource") else [],
+                "anomaly_score": anomaly.get("anomaly_score", 0.0),
+                "matched_techniques": threat_analysis.get("matched_techniques", []),
+                "recommended_actions": threat_result.get("recommended_actions", {}),
+                "executed_actions": threat_result.get("executed_actions", []),
+                "pending_actions": threat_result.get("pending_actions", []),
+                "threat_analysis": threat_analysis
+            }
+            
+            await manager.broadcast({
+                "type": "threat_detected",
+                "data": frontend_threat,
+                "timestamp": datetime.now().isoformat()
+            })
+            print(f"  ✓ Broadcast via WebSocket: {alert_id}")
+        else:
+            print("  ⚠ Warning: WebSocket manager not available")
+    except Exception as e:
+        print(f"  ✗ Failed to broadcast threat via WebSocket: {e}")
+        import traceback
+        traceback.print_exc()
 
 # ============================================================================
 # Pydantic Models (Data Schemas)
@@ -437,6 +616,36 @@ async def get_threat_detail(alert_id: str):
         if not threat:
             raise HTTPException(status_code=404, detail=f"Threat {alert_id} not found")
         
+        # Parse threat_analysis JSON if it's a string
+        threat_analysis = threat.get("threat_analysis", {})
+        if isinstance(threat_analysis, str):
+            try:
+                threat_analysis = json.loads(threat_analysis)
+            except:
+                threat_analysis = {}
+        
+        # Parse action JSONs if they're strings
+        executed_actions = threat.get("executed_actions", [])
+        if isinstance(executed_actions, str):
+            try:
+                executed_actions = json.loads(executed_actions)
+            except:
+                executed_actions = []
+        
+        pending_actions = threat.get("pending_actions", [])
+        if isinstance(pending_actions, str):
+            try:
+                pending_actions = json.loads(pending_actions)
+            except:
+                pending_actions = []
+        
+        recommended_actions = threat.get("recommended_actions", {})
+        if isinstance(recommended_actions, str):
+            try:
+                recommended_actions = json.loads(recommended_actions)
+            except:
+                recommended_actions = {}
+        
         # Convert to frontend format
         formatted_threat = {
             "alert_id": threat.get("alert_id"),
@@ -444,14 +653,14 @@ async def get_threat_detail(alert_id: str):
             "confidence": threat.get("confidence", 0.5),
             "threat_type": threat.get("threat_type", "Unknown"),
             "description": threat.get("description", ""),
-            "timestamp": threat.get("timestamp").isoformat() if isinstance(threat.get("timestamp"), datetime) else threat.get("timestamp"),
+            "timestamp": threat.get("timestamp").isoformat() if isinstance(threat.get("timestamp"), datetime) else str(threat.get("timestamp", "")),
             "affected_resources": threat.get("affected_resources", []),
             "anomaly_score": threat.get("anomaly_score"),
             "matched_techniques": threat.get("matched_techniques", []),
-            "recommended_actions": threat.get("recommended_actions", []),
-            "executed_actions": threat.get("executed_actions", []),
-            "pending_actions": threat.get("pending_actions", []),
-            "threat_analysis": threat.get("threat_analysis", {})
+            "recommended_actions": recommended_actions,
+            "executed_actions": executed_actions,
+            "pending_actions": pending_actions,
+            "threat_analysis": threat_analysis
         }
         
         return {
@@ -493,10 +702,35 @@ async def get_pending_actions():
     
     try:
         pending = orchestrator.action_executor.get_pending_actions()
+        
+        # Format actions for frontend
+        formatted_actions = []
+        for action in pending:
+            params = action.get("parameters", {})
+            # Extract threat_context from parameters if present
+            threat_context = params.get("threat_context")
+            if threat_context:
+                # Remove threat_context from parameters to avoid duplication
+                params = {k: v for k, v in params.items() if k != "threat_context"}
+            
+            formatted_actions.append({
+                "action_id": action.get("action_id"),
+                "type": action.get("action_type", action.get("type", "unknown")),
+                "tier": action.get("tier", "red"),
+                "status": action.get("status", "pending"),
+                "description": action.get("description", ""),
+                "parameters": params,
+                "threat_context": threat_context,
+                "executed_at": action.get("executed_at").isoformat() if action.get("executed_at") else None,
+                "executed_by": action.get("executed_by"),
+                "rollback_info": action.get("rollback_info"),
+                "requires_approval": action.get("tier", "red") == "red"
+            })
+        
         return {
             "status": "success",
-            "count": len(pending),
-            "actions": pending,
+            "count": len(formatted_actions),
+            "actions": formatted_actions,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -572,10 +806,35 @@ async def get_action_history(limit: int = 50):
     
     try:
         history = orchestrator.action_executor.get_action_history(limit)
+        
+        # Format actions for frontend
+        formatted_actions = []
+        for action in history:
+            params = action.get("parameters", {})
+            # Extract threat_context from parameters if present
+            threat_context = params.get("threat_context")
+            if threat_context:
+                # Remove threat_context from parameters to avoid duplication
+                params = {k: v for k, v in params.items() if k != "threat_context"}
+            
+            formatted_actions.append({
+                "action_id": action.get("action_id"),
+                "type": action.get("action_type", action.get("type", "unknown")),
+                "tier": action.get("tier", "green"),
+                "status": action.get("status", "completed"),
+                "description": action.get("description", ""),
+                "parameters": params,
+                "threat_context": threat_context,
+                "executed_at": action.get("executed_at").isoformat() if action.get("executed_at") else action.get("completed_at").isoformat() if action.get("completed_at") else None,
+                "executed_by": action.get("executed_by"),
+                "rollback_info": action.get("rollback_info"),
+                "requires_approval": action.get("tier", "green") == "red"
+            })
+        
         return {
             "status": "success",
-            "count": len(history),
-            "actions": history,
+            "count": len(formatted_actions),
+            "actions": formatted_actions,
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
@@ -812,23 +1071,66 @@ async def get_compliance_report(report_id: str):
 # Startup and Shutdown Events
 # ============================================================================
 
+# Include simulation routes if available
+if SIMULATION_AVAILABLE:
+    # Set simulator in simulation_routes module
+    try:
+        import backend.api.simulation_routes as sim_routes
+        sim_routes.simulator = None  # Will be initialized in startup
+        sim_routes.websocket_manager = manager
+        app.include_router(simulation_router)
+        print(" Simulation routes enabled")
+    except Exception as e:
+        print(f" Warning: Could not enable simulation routes: {e}")
+        SIMULATION_AVAILABLE = False
+
 @app.on_event("startup")
 async def startup_event():
     """
     Run initialization tasks when the server starts
     """
+    global simulator
+    
     print(" AutoSec AI starting up...")
     print(f" API Documentation: http://localhost:8000/docs")
     print(f" Health Check: http://localhost:8000/health")
     print(f" Agent Status: http://localhost:8000/api/v1/agent/status")
     print(f"\n To train the agent: POST http://localhost:8000/api/v1/train")
+    
+    # Initialize simulator if available
+    if SIMULATION_AVAILABLE:
+        try:
+            # Initialize simulator (will work even if agent not trained - uses template-based generation)
+            simulator = ThreatSimulator(
+                orchestrator=orchestrator,  # Always pass orchestrator, simulator will check if trained
+                on_threat_detected=on_threat_detected_callback
+            )
+            # Set in simulation_routes module
+            if 'sim_routes' in globals():
+                sim_routes.simulator = simulator
+            print(" Threat simulator initialized (ready for demo mode)")
+            if not agent_initialized:
+                print("  Note: Using template-based threat generation (agent not trained)")
+            else:
+                print("  Note: Agent is trained - threats will be processed through full pipeline")
+        except Exception as e:
+            print(f" Warning: Failed to initialize simulator: {e}")
+            import traceback
+            traceback.print_exc()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """
     Clean up resources when the server shuts down
     """
+    global simulator
+    
     print(" AutoSec AI shutting down...")
+    
+    # Stop simulator if running
+    if simulator and simulator.is_running:
+        await simulator.stop_simulation()
+        print(" Threat simulator stopped")
 
 # ============================================================================
 # Run the server (for development)

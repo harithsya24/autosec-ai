@@ -13,10 +13,24 @@ import json
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    # Load .env from project root (3 levels up from backend/agents/)
+    env_path = Path(__file__).parent.parent.parent / ".env"
+    load_dotenv(env_path)
+except ImportError:
+    pass  # python-dotenv not installed, use system env vars only
+
+# Fix huggingface tokenizers warning
+import os
+if "TOKENIZERS_PARALLELISM" not in os.environ:
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 try:
     from langchain_openai import ChatOpenAI
-    from langchain.prompts import ChatPromptTemplate
-    from langchain.schema import HumanMessage, SystemMessage
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.messages import HumanMessage, SystemMessage
     LANGCHAIN_AVAILABLE = True
 except ImportError:
     LANGCHAIN_AVAILABLE = False
@@ -66,9 +80,8 @@ class ThreatIntelligenceAgent:
             else:
                 try:
                     self.llm = ChatOpenAI(
-                        model_name=llm_model,
-                        temperature=temperature,
-                        api_key=api_key
+                        model=llm_model,
+                        temperature=temperature
                     )
                     print(f"LLM initialized: {llm_model}")
                 except Exception as e:
@@ -286,6 +299,12 @@ class ThreatIntelligenceAgent:
         context = "\n".join(context_parts)
         
         # Build anomaly description
+        features = anomaly.get('features', {})
+        features_str = ", ".join([
+            f"{k}: {v}" for k, v in features.items() 
+            if v and k not in ['hour_of_day', 'day_of_week']  # Skip numeric details
+        ]) if features else "none"
+        
         anomaly_desc = f"""
 Anomaly Detected:
 - Action: {anomaly.get('action', 'unknown')}
@@ -293,7 +312,7 @@ Anomaly Detected:
 - Source IP: {anomaly.get('source_ip', 'unknown')}
 - Severity: {anomaly.get('severity', 'medium')}
 - Anomaly Score: {anomaly.get('anomaly_score', 0.0):.3f}
-- Features: {json.dumps(anomaly.get('features', {}), indent=2)}
+- Key Indicators: {features_str}
 """
         
         # Create prompt
@@ -322,9 +341,39 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
         try:
             messages = prompt.format_messages()
             response = self.llm.invoke(messages)
-            return response.content
+            
+            # Handle different response formats
+            if hasattr(response, 'content'):
+                explanation = response.content
+            elif isinstance(response, str):
+                explanation = response
+            elif hasattr(response, 'text'):
+                explanation = response.text
+            else:
+                explanation = str(response)
+            
+            # Clean up the explanation (remove any JSON artifacts)
+            if explanation.startswith('```'):
+                # Remove markdown code blocks if present
+                explanation = explanation.split('```')[1]
+                if explanation.startswith('json'):
+                    explanation = explanation[4:]
+                explanation = explanation.strip()
+            
+            return explanation.strip()
+            
         except Exception as e:
-            print(f" LLM call failed: {e}")
+            import traceback
+            error_detail = str(e)
+            # Provide more helpful error message
+            if "is_off_hours" in error_detail or "JSON" in error_detail:
+                print(f" LLM call failed (formatting issue): {type(e).__name__}")
+                print(f"   Falling back to template-based explanation")
+            else:
+                print(f" LLM call failed: {error_detail}")
+                if os.getenv("DEBUG", "").lower() == "true":
+                    traceback.print_exc()
+            
             return self._generate_template_explanation(
                 anomaly, threat_results, cve_results, incident_results
             )
@@ -499,7 +548,18 @@ if __name__ == "__main__":
         print(f"Loaded: {rag.get_collection_stats()}")
     
     # Initialize agent
-    agent = ThreatIntelligenceAgent(rag=rag, use_llm=False)  # Test without LLM first
+    # Check if OPENAI_API_KEY is set
+    import os
+    has_api_key = bool(os.getenv("OPENAI_API_KEY"))
+    use_llm = has_api_key  # Use LLM if API key is available
+    
+    if not has_api_key:
+        print("  Note: OPENAI_API_KEY not set. Running in RAG-only mode.")
+        print("  To enable LLM: Set OPENAI_API_KEY in .env file or environment")
+    else:
+        print("  OPENAI_API_KEY found. LLM will be used for reasoning.")
+    
+    agent = ThreatIntelligenceAgent(rag=rag, use_llm=use_llm)
     
     # Create sample anomaly
     sample_anomaly = {
