@@ -8,10 +8,8 @@ from datetime import datetime
 import sys
 from pathlib import Path
 
-# Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-# Import agents (handle both absolute and relative imports)
 try:
     from backend.agents.log_analyzer import LogAnalyzerAgent
     from backend.agents.threat_intelligence_agent import ThreatIntelligenceAgent
@@ -19,7 +17,6 @@ try:
     from backend.agents.action_executor import ActionExecutor
     from rag.vector_store.chroma_setup import ThreatIntelligenceRAG
 except ImportError:
-    # Fallback for relative imports
     from .log_analyzer import LogAnalyzerAgent
     from .threat_intelligence_agent import ThreatIntelligenceAgent
     from .response_agent import ResponseAgent
@@ -63,7 +60,6 @@ class OrchestratorAgent:
         self.response_agent = response_agent or ResponseAgent(sandbox_mode=sandbox_mode)
         self.action_executor = action_executor or ActionExecutor(sandbox_mode=sandbox_mode)
         
-        # Initialize RAG if not provided
         if threat_intel is None:
             rag = ThreatIntelligenceRAG()
             self.threat_intel = ThreatIntelligenceAgent(rag=rag)
@@ -108,7 +104,6 @@ class OrchestratorAgent:
         if return_full_analysis:
             threat_analysis = self.threat_intel.analyze_threat(anomaly)
         else:
-            # Quick mode - skip RAG/LLM
             threat_analysis = {
                 "threat_type": "unknown",
                 "confidence": abs(anomaly.get("anomaly_score", 0.0)),
@@ -174,8 +169,7 @@ class OrchestratorAgent:
                     "parameters": action.get("parameters", {}),
                     "requires_approval": True
             })
-        
-        # Combine everything
+                
         return {
             "threat_detected": True,
             "status": "threat_identified",
@@ -268,7 +262,6 @@ class OrchestratorAgent:
             
             results["threats"].append(threat_entry)
             
-            # Update summary
             severity = anomaly.get("severity", "unknown")
             results["summary"]["by_severity"][severity] = \
                 results["summary"]["by_severity"].get(severity, 0) + 1
@@ -310,10 +303,8 @@ if __name__ == "__main__":
     """Test the Orchestrator"""
     print(" Testing Orchestrator Agent...")
     
-    # Initialize orchestrator
     orchestrator = OrchestratorAgent(sandbox_mode=True)
     
-    # Check status
     status = orchestrator.get_system_status()
     print(f"\n System Status:")
     print(f"  Log Analyzer: {'Trained' if status['log_analyzer']['trained'] else 'Not Trained'}")
@@ -325,7 +316,6 @@ if __name__ == "__main__":
         print("\n  Log Analyzer not trained. Run training first.")
         print("   Example: POST /api/v1/train")
     else:
-        # Test with sample log
         sample_log = {
             "Flow Duration": 120.5,
             "Total Fwd Packets": 150,

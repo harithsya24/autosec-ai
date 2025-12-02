@@ -53,7 +53,6 @@ class ResponseAgent:
         severity = threat_analysis.get("severity", "medium")
         threat_type = threat_analysis.get("threat_type", "unknown")
         
-        # Determine action tiers
         green_actions = self._get_green_actions(threat_analysis, anomaly)
         yellow_actions = self._get_yellow_actions(threat_analysis, anomaly, confidence, severity)
         red_actions = self._get_red_actions(threat_analysis, anomaly, confidence, severity)
@@ -87,7 +86,6 @@ class ResponseAgent:
         """Get  GREEN tier actions (always safe to auto-execute)"""
         actions = []
         
-        # Always log the event
         actions.append({
             "id": f"action_log_{datetime.now().timestamp()}",
             "type": "log_event",

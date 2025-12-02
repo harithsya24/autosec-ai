@@ -7,7 +7,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from agents.log_analyzer import LogAnalyzerAgent
 
-# Create simple, consistent "benign" baseline
+# Creating simple, consistent "benign" baseline
 simple_benign_logs = []
 for i in range(1000):
     log = {
@@ -36,7 +36,7 @@ extreme_log = {
     'Dst IP': '10.0.0.1',
     'Destination Port': 9999,
     'Protocol': 'TCP',
-    'Total Length of Fwd Packets': 95000000,  # 95 MB!
+    'Total Length of Fwd Packets': 95000000,  
     'Total Length of Bwd Packets': 100,
     'Flow Duration': 0.001,
     'Flow Start': '2025-01-15 03:00:00'

@@ -10,19 +10,15 @@ from datetime import datetime
 from pathlib import Path
 import json
 
-# Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-# Load environment variables from .env file
 try:
     from dotenv import load_dotenv
-    # Load .env from project root (3 levels up from backend/agents/)
     env_path = Path(__file__).parent.parent.parent / ".env"
     load_dotenv(env_path)
 except ImportError:
-    pass  # python-dotenv not installed, use system env vars only
+    pass  
 
-# Fix huggingface tokenizers warning
 import os
 if "TOKENIZERS_PARALLELISM" not in os.environ:
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -71,7 +67,7 @@ class ThreatIntelligenceAgent:
         self.llm_model = llm_model
         self.temperature = temperature
         
-        # Initialize LLM if available
+        # Initialize LLM 
         if self.use_llm:
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
@@ -265,16 +261,7 @@ class ThreatIntelligenceAgent:
         # Ensure confidence is in valid range
         return min(1.0, max(0.0, total_confidence))
     
-    def _generate_llm_explanation(
-        self,
-        anomaly: Dict,
-        threat_results: List[Dict],
-        cve_results: List[Dict],
-        incident_results: List[Dict]
-    ) -> str:
-        """Generate explanation using LLM"""
-        
-        # Build context from retrieved documents
+    def _generate_llm_explanation(self, anomaly: Dict, threat_results: List[Dict], cve_results: List[Dict], incident_results: List[Dict]) -> str:
         context_parts = []
         
         if threat_results:
@@ -302,7 +289,7 @@ class ThreatIntelligenceAgent:
         features = anomaly.get('features', {})
         features_str = ", ".join([
             f"{k}: {v}" for k, v in features.items() 
-            if v and k not in ['hour_of_day', 'day_of_week']  # Skip numeric details
+            if v and k not in ['hour_of_day', 'day_of_week'] 
         ]) if features else "none"
         
         anomaly_desc = f"""
@@ -314,8 +301,6 @@ Anomaly Detected:
 - Anomaly Score: {anomaly.get('anomaly_score', 0.0):.3f}
 - Key Indicators: {features_str}
 """
-        
-        # Create prompt
         prompt = ChatPromptTemplate.from_messages([
             ("system", """You are a cybersecurity expert analyzing security threats. 
 Your task is to explain detected anomalies in clear, actionable language.
@@ -342,7 +327,6 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
             messages = prompt.format_messages()
             response = self.llm.invoke(messages)
             
-            # Handle different response formats
             if hasattr(response, 'content'):
                 explanation = response.content
             elif isinstance(response, str):
@@ -352,9 +336,7 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
             else:
                 explanation = str(response)
             
-            # Clean up the explanation (remove any JSON artifacts)
             if explanation.startswith('```'):
-                # Remove markdown code blocks if present
                 explanation = explanation.split('```')[1]
                 if explanation.startswith('json'):
                     explanation = explanation[4:]
@@ -365,7 +347,6 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
         except Exception as e:
             import traceback
             error_detail = str(e)
-            # Provide more helpful error message
             if "is_off_hours" in error_detail or "JSON" in error_detail:
                 print(f" LLM call failed (formatting issue): {type(e).__name__}")
                 print(f"   Falling back to template-based explanation")
@@ -378,15 +359,7 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
                 anomaly, threat_results, cve_results, incident_results
             )
     
-    def _generate_template_explanation(
-        self,
-        anomaly: Dict,
-        threat_results: List[Dict],
-        cve_results: List[Dict],
-        incident_results: List[Dict]
-    ) -> str:
-        """Generate explanation using templates (fallback when LLM unavailable)"""
-        
+    def _generate_template_explanation(self, anomaly: Dict, threat_results: List[Dict], cve_results: List[Dict], incident_results: List[Dict]) -> str:
         action = anomaly.get("action", "activity")
         severity = anomaly.get("severity", "medium")
         status = anomaly.get("status", "")
@@ -422,41 +395,29 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
         return " ".join(explanation_parts)
     
     def _extract_techniques(self, threat_results: List[Dict]) -> List[str]:
-        """Extract MITRE ATT&CK technique IDs from results"""
         techniques = []
         for result in threat_results:
             metadata = result.get("metadata", {})
-            # Try to extract technique ID from document or metadata
             doc = result.get("document", "")
             if "T" in doc and len(doc.split("T")[1].split()[0]) <= 5:
-                # Simple heuristic to find technique IDs like T1078
                 parts = doc.split()
                 for part in parts:
                     if part.startswith("T") and len(part) <= 6:
                         techniques.append(part)
-        return list(set(techniques))[:5]  # Return unique, limit to 5
+        return list(set(techniques))[:5] 
     
-    def _extract_recommendations(
-        self,
-        threat_results: List[Dict],
-        cve_results: List[Dict],
-        incident_results: List[Dict]
-    ) -> List[str]:
+    def _extract_recommendations(self, threat_results: List[Dict], cve_results: List[Dict], incident_results: List[Dict]) -> List[str]:
         """Extract recommended actions from retrieved context"""
         recommendations = []
-        
-        # Extract from threat intelligence
         for result in threat_results:
             doc = result.get("document", "")
             if "mitigation" in doc.lower() or "recommend" in doc.lower():
-                # Simple extraction - look for action verbs
                 lines = doc.split("\n")
                 for line in lines:
                     if any(word in line.lower() for word in ["enable", "implement", "apply", "update"]):
-                        if len(line) < 100:  # Keep it concise
+                        if len(line) < 100: 
                             recommendations.append(line.strip())
         
-        # Default recommendations if none found
         if not recommendations:
             recommendations = [
                 "Review authentication logs for suspicious patterns",
@@ -464,18 +425,13 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
                 "Enable additional monitoring for this source"
             ]
         
-        return recommendations[:5]  # Limit to 5
+        return recommendations[:5]  
     
-    def _classify_threat_type(
-        self,
-        anomaly: Dict,
-        threat_results: List[Dict]
-    ) -> str:
+    def _classify_threat_type(self, anomaly: Dict, threat_results: List[Dict]) -> str:
         """Classify the type of threat"""
         action = anomaly.get("action", "").lower()
         status = anomaly.get("status", "").lower()
         
-        # Check retrieved threats for classification
         if threat_results:
             doc = threat_results[0].get("document", "").lower()
             if "credential" in doc or "brute force" in doc:
@@ -485,7 +441,6 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
             if "privilege" in doc:
                 return "privilege_escalation"
         
-        # Classify based on anomaly characteristics
         if status in ["failed", "denied"] and "login" in action:
             return "credential_stuffing"
         if anomaly.get("features", {}).get("data_transfer_volume", 0) > 10_000_000:
@@ -495,12 +450,7 @@ Provide a clear explanation of what this anomaly likely represents, referencing 
         
         return "unknown_threat"
     
-    def _format_citations(
-        self,
-        threat_results: List[Dict],
-        cve_results: List[Dict],
-        incident_results: List[Dict]
-    ) -> List[Dict]:
+    def _format_citations(self, threat_results: List[Dict], cve_results: List[Dict], incident_results: List[Dict]) -> List[Dict]:
         """Format citations for display"""
         citations = []
         
@@ -531,8 +481,6 @@ if __name__ == "__main__":
     
     # Initialize RAG
     rag = ThreatIntelligenceRAG()
-    
-    # Add sample data if needed
     from rag.vector_store.chroma_setup import (
         create_sample_threat_documents,
         create_sample_cve_documents,
@@ -548,10 +496,9 @@ if __name__ == "__main__":
         print(f"Loaded: {rag.get_collection_stats()}")
     
     # Initialize agent
-    # Check if OPENAI_API_KEY is set
     import os
     has_api_key = bool(os.getenv("OPENAI_API_KEY"))
-    use_llm = has_api_key  # Use LLM if API key is available
+    use_llm = has_api_key  
     
     if not has_api_key:
         print("  Note: OPENAI_API_KEY not set. Running in RAG-only mode.")
@@ -575,7 +522,6 @@ if __name__ == "__main__":
         }
     }
     
-    # Analyze
     print("\n Analyzing sample anomaly...")
     analysis = agent.analyze_threat(sample_anomaly)
     
