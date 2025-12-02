@@ -187,3 +187,4 @@ The simulation now works exactly like a real system would. You can:
 - Add time-based patterns
 - Integrate with real log sources
 
+

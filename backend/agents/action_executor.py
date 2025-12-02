@@ -1,6 +1,6 @@
 """
 Action Executor Agent
-Executes mitigation actions based on traffic light system
+Executes mitigation actions based on traffic light system (G/Y/R)
 """
 
 from typing import Dict, List, Optional
@@ -10,7 +10,6 @@ import json
 import sys
 from pathlib import Path
 
-# Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
 try:
@@ -20,7 +19,6 @@ except ImportError:
 
 
 class ActionStatus(str, Enum):
-    """Status of an action"""
     PENDING = "pending"
     EXECUTING = "executing"
     COMPLETED = "completed"
@@ -50,19 +48,17 @@ class ActionExecutor:
         """
         self.db = db or SecurityLogDatabase()
         self.sandbox_mode = sandbox_mode
-        self.active_actions = {}  # Track active actions (rate limits, locks, etc.)
+        self.active_actions = {}  
         
-        # Initialize action tracking table
         self._init_action_tables()
     
     def _init_action_tables(self):
-        """Initialize database tables for action tracking"""
         import sqlite3
         conn = sqlite3.connect(self.db.db_path, detect_types=sqlite3.PARSE_DECLTYPES)
-        cursor = conn.cursor()
+        c = conn.cursor()
         
         # Actions table
-        cursor.execute('''
+        c.execute('''
             CREATE TABLE IF NOT EXISTS actions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 action_id TEXT UNIQUE NOT NULL,
@@ -82,8 +78,7 @@ class ActionExecutor:
             )
         ''')
         
-        # Action approvals table
-        cursor.execute('''
+        c.execute('''
             CREATE TABLE IF NOT EXISTS action_approvals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 action_id TEXT NOT NULL,
@@ -95,10 +90,9 @@ class ActionExecutor:
             )
         ''')
         
-        # Create indexes
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_tier ON actions(tier)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_actions_action_id ON actions(action_id)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_actions_status ON actions(status)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_actions_tier ON actions(tier)')
+        c.execute('CREATE INDEX IF NOT EXISTS idx_actions_action_id ON actions(action_id)')
         
         conn.commit()
         conn.close()
@@ -106,11 +100,10 @@ class ActionExecutor:
     def _get_connection(self):
         """Get database connection (helper method)"""
         import sqlite3
-        # Add timeout to handle database locking
         conn = sqlite3.connect(
             self.db.db_path, 
             detect_types=sqlite3.PARSE_DECLTYPES,
-            timeout=10.0  # 10 second timeout
+            timeout=10.0  
         )
         return conn
     
@@ -130,20 +123,15 @@ class ActionExecutor:
         tier = action.get("tier", "green")
         auto_execute = action.get("auto_execute", False)
         
-        # Track action in database
         action_record = self._create_action_record(
             action_id, action_type, tier, action, threat_alert_id
         )
         
-        # Handle based on tier
-        if tier == "green" or (tier == "yellow" and auto_execute):
-            # Auto-execute
+        if tier == "green" or (tier == "yellow" and auto_execute): #Execute automatically
             return self._execute_action_internal(action, action_record)
-        elif tier == "red":
-            # Queue for approval
+        elif tier == "red": # Queue for approval
             return self._queue_for_approval(action, action_record)
-        else:
-            # Yellow but not auto-execute
+        else: # Yellow but not auto-execute
             return {
                 "action_id": action_id,
                 "status": ActionStatus.PENDING,
@@ -160,8 +148,6 @@ class ActionExecutor:
         action: Dict,
         threat_alert_id: Optional[int]
     ) -> int:
-        """Create action record in database"""
-        # Calculate expiration if duration specified
         expires_at = None
         if action.get("duration"):
             duration_str = action.get("duration", "")
@@ -169,8 +155,8 @@ class ActionExecutor:
         
         conn = self._get_connection()
         try:
-            cursor = conn.cursor()
-            cursor.execute('''
+            c = conn.cursor()
+            c.execute('''
                 INSERT OR REPLACE INTO actions
                 (action_id, action_type, tier, status, threat_alert_id, description, 
                  parameters, expires_at, created_at)
@@ -188,7 +174,7 @@ class ActionExecutor:
             ))
             
             conn.commit()
-            record_id = cursor.lastrowid
+            record_id = c.lastrowid
             return record_id
         finally:
             conn.close()
@@ -198,7 +184,6 @@ class ActionExecutor:
         action_id = action.get("id")
         action_type = action.get("type")
         
-        # Update status to executing
         self._update_action_status(action_id, ActionStatus.EXECUTING)
         
         try:
@@ -226,7 +211,6 @@ class ActionExecutor:
             else:
                 raise ValueError(f"Unknown action type: {action_type}")
             
-            # Update status to completed
             self._update_action_status(action_id, ActionStatus.COMPLETED, result)
             
             return {
@@ -239,7 +223,6 @@ class ActionExecutor:
             }
             
         except Exception as e:
-            # Update status to failed
             self._update_action_status(action_id, ActionStatus.FAILED, error=str(e))
             
             return {
@@ -252,9 +235,8 @@ class ActionExecutor:
             }
     
     def _queue_for_approval(self, action: Dict, action_record_id: int) -> Dict:
-        """Queue a red-tier action for approval"""
+        #Queue a red-tier action for approval
         action_id = action.get("id")
-        
         return {
             "action_id": action_id,
             "status": ActionStatus.PENDING,
@@ -265,46 +247,41 @@ class ActionExecutor:
             "sandbox": self.sandbox_mode
         }
     
-    # ============================================================================
-    # Action Executors ( GREEN Tier)
-    # ============================================================================
     
+    # Action Executors ( GREEN Tier)
     def _execute_log_event(self, action: Dict) -> Dict:
-        """Execute log event action"""
+        #Execute log event action
         if self.sandbox_mode:
             return {
                 "message": "Event logged (sandbox mode)",
                 "logged": True
             }
-        # In production, would log to actual logging system
-        return {"message": "Event logged", "logged": True}
+        return {"message": "Event logged", "logged": True} # In production, would log to actual logging system
     
     def _execute_send_alert(self, action: Dict) -> Dict:
-        """Execute send alert action"""
+        #Execute send alert action
         channels = action.get("channels", ["email"])
-        
         if self.sandbox_mode:
             return {
                 "message": f"Alert sent to {', '.join(channels)} (sandbox mode)",
                 "channels": channels,
                 "sent": True
             }
-        # In production, would send actual alerts
-        return {"message": f"Alert sent to {', '.join(channels)}", "channels": channels}
+        
+        return {"message": f"Alert sent to {', '.join(channels)}", "channels": channels} # In production, would send actual alerts
     
     def _execute_create_ticket(self, action: Dict) -> Dict:
-        """Execute create ticket action"""
+        #Execute create ticket action
         if self.sandbox_mode:
             return {
                 "message": "Ticket created (sandbox mode)",
                 "ticket_id": f"TICKET_{datetime.now().timestamp()}",
                 "created": True
             }
-        # In production, would create actual ticket
-        return {"message": "Ticket created", "ticket_id": "TICKET_123"}
+        return {"message": "Ticket created", "ticket_id": "TICKET_123"} # In production, would create actual ticket
     
     def _execute_increase_monitoring(self, action: Dict) -> Dict:
-        """Execute increase monitoring action"""
+        #Execute increase monitoring action
         duration = action.get("duration", "24h")
         target = action.get("parameters", {}).get("source_ip", "unknown")
         
@@ -315,21 +292,18 @@ class ActionExecutor:
                 "duration": duration,
                 "active": True
             }
-        # In production, would configure monitoring
-        return {"message": f"Monitoring increased for {target}", "target": target}
+        return {"message": f"Monitoring increased for {target}", "target": target} # In production, would configure monitoring
     
-    # ============================================================================
+    
+    
     # Action Executors ( YELLOW Tier)
-    # ============================================================================
-    
     def _execute_rate_limit_ip(self, action: Dict) -> Dict:
-        """Execute rate limit IP action"""
+        #Execute rate limit IP action
         params = action.get("parameters", {})
         ip = params.get("ip", "unknown")
         duration = action.get("duration", "5m")
         expires_at = self._parse_duration(duration)
         
-        # Store active rate limit
         self.active_actions[f"rate_limit_{ip}"] = {
             "type": "rate_limit",
             "ip": ip,
@@ -348,7 +322,7 @@ class ActionExecutor:
         return {"message": f"Rate limit applied to {ip}", "ip": ip}
     
     def _execute_flag_account(self, action: Dict) -> Dict:
-        """Execute flag account action"""
+        #Execute flag account action
         params = action.get("parameters", {})
         user_id = params.get("user_id", "unknown")
         reason = params.get("reason", "security_review")
@@ -372,7 +346,7 @@ class ActionExecutor:
         return {"message": f"Account {user_id} flagged", "user_id": user_id}
     
     def _execute_trigger_auth_check(self, action: Dict) -> Dict:
-        """Execute trigger auth check action"""
+        #Execute trigger auth check action
         duration = action.get("duration", "1h")
         
         if self.sandbox_mode:
@@ -384,12 +358,11 @@ class ActionExecutor:
         # In production, would configure auth checks
         return {"message": "Additional auth checks enabled", "duration": duration}
     
-    # ============================================================================
-    # Action Executors ( RED Tier)
-    # ============================================================================
     
+    
+    # Action Executors ( RED Tier)
     def _execute_lock_account(self, action: Dict) -> Dict:
-        """Execute lock account action (requires approval)"""
+        #Execute lock account action (requires approval)
         params = action.get("parameters", {})
         user_id = params.get("user_id", "unknown")
         duration = action.get("duration", "30m")
@@ -414,7 +387,7 @@ class ActionExecutor:
         return {"message": f"Account {user_id} locked", "user_id": user_id}
     
     def _execute_block_ip(self, action: Dict) -> Dict:
-        """Execute block IP action (requires approval)"""
+        #Execute block IP action (requires approval)
         params = action.get("parameters", {})
         ip = params.get("ip", "unknown")
         duration = action.get("duration", "1h")
@@ -439,7 +412,7 @@ class ActionExecutor:
         return {"message": f"IP {ip} blocked", "ip": ip}
     
     def _execute_revoke_tokens(self, action: Dict) -> Dict:
-        """Execute revoke tokens action (requires approval)"""
+        #Execute revoke tokens action (requires approval)
         params = action.get("parameters", {})
         user_id = params.get("user_id", "unknown")
         
@@ -452,10 +425,8 @@ class ActionExecutor:
         # In production, would revoke tokens
         return {"message": f"API tokens revoked for {user_id}", "user_id": user_id}
     
-    # ============================================================================
-    # Utility Methods
-    # ============================================================================
     
+    # Utility Methods
     def _update_action_status(
         self,
         action_id: str,
@@ -463,7 +434,6 @@ class ActionExecutor:
         result: Optional[Dict] = None,
         error: Optional[str] = None
     ):
-        """Update action status in database"""
         update_fields = ["status = ?"]
         values = [status.value]
         
@@ -495,12 +465,11 @@ class ActionExecutor:
             conn.close()
     
     def _parse_duration(self, duration_str: str) -> Optional[datetime]:
-        """Parse duration string (e.g., '5m', '1h', '24h') to expiration datetime"""
+        #Parse duration string (e.g., '5m', '1h', '24h') to expiration datetime
         if not duration_str:
             return None
         
         try:
-            # Extract number and unit
             if duration_str.endswith('m'):
                 minutes = int(duration_str[:-1])
                 return datetime.now() + timedelta(minutes=minutes)
@@ -516,16 +485,15 @@ class ActionExecutor:
         return None
     
     def approve_action(self, action_id: str, approver: str, reason: Optional[str] = None) -> Dict:
-        """Approve a pending red-tier action"""
-        # Get action
+        #Approve a pending red-tier action
         conn = self._get_connection()
         try:
             conn.row_factory = lambda cursor, row: {
                 col[0]: row[idx] for idx, col in enumerate(cursor.description)
             }
-            cursor = conn.cursor()
+            c = conn.cursor()
             
-            cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
+            c.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
             action = cursor.fetchone()
             
             if not action:
@@ -534,8 +502,7 @@ class ActionExecutor:
             if action['status'] != ActionStatus.PENDING:
                 return {"status": "error", "message": f"Action is {action['status']}, cannot approve"}
             
-            # Record approval
-            cursor.execute('''
+            c.execute('''
                 INSERT INTO action_approvals (action_id, approver, decision, reason)
                 VALUES (?, ?, ?, ?)
             ''', (action_id, approver, "approved", reason))
@@ -544,7 +511,6 @@ class ActionExecutor:
         finally:
             conn.close()
         
-        # Update action status (uses its own connection)
         self._update_action_status(action_id, ActionStatus.APPROVED)
         
         # Execute the action
@@ -554,7 +520,7 @@ class ActionExecutor:
             "tier": action['tier'],
             "description": action['description'],
             "parameters": json.loads(action['parameters'] or '{}'),
-            "duration": None  # Would parse from expires_at
+            "duration": None  
         }
         
         result = self._execute_action_internal(action_dict, action['id'])
@@ -566,13 +532,12 @@ class ActionExecutor:
         }
     
     def reject_action(self, action_id: str, approver: str, reason: Optional[str] = None) -> Dict:
-        """Reject a pending red-tier action"""
+        #Reject a pending red-tier action
         conn = self._get_connection()
         try:
-            cursor = conn.cursor()
+            c = conn.cursor()
             
-            # Record rejection
-            cursor.execute('''
+            c.execute('''
                 INSERT INTO action_approvals (action_id, approver, decision, reason)
                 VALUES (?, ?, ?, ?)
             ''', (action_id, approver, "rejected", reason))
@@ -581,7 +546,6 @@ class ActionExecutor:
         finally:
             conn.close()
         
-        # Update action status (uses its own connection)
         self._update_action_status(action_id, ActionStatus.REJECTED)
         
         return {
@@ -591,23 +555,22 @@ class ActionExecutor:
         }
     
     def get_pending_actions(self) -> List[Dict]:
-        """Get all pending actions requiring approval"""
+        #Get all pending actions requiring approval
         conn = self._get_connection()
         try:
             conn.row_factory = lambda cursor, row: {
                 col[0]: row[idx] for idx, col in enumerate(cursor.description)
             }
-            cursor = conn.cursor()
+            c = conn.cursor()
             
-            cursor.execute('''
+            c.execute('''
                 SELECT * FROM actions
                 WHERE status = ? AND tier = ?
                 ORDER BY created_at DESC
             ''', (ActionStatus.PENDING, "red"))
             
-            actions = cursor.fetchall()
+            actions = c.fetchall()
             
-            # Convert JSON fields
             for action in actions:
                 if action.get('parameters'):
                     action['parameters'] = json.loads(action['parameters'])
@@ -617,23 +580,22 @@ class ActionExecutor:
             conn.close()
     
     def get_action_history(self, limit: int = 50) -> List[Dict]:
-        """Get action execution history"""
+        #Get action execution history
         conn = self._get_connection()
         try:
             conn.row_factory = lambda cursor, row: {
                 col[0]: row[idx] for idx, col in enumerate(cursor.description)
             }
-            cursor = conn.cursor()
+            c = conn.cursor()
             
-            cursor.execute('''
+            c.execute('''
                 SELECT * FROM actions
                 ORDER BY created_at DESC
                 LIMIT ?
             ''', (limit,))
             
-            actions = cursor.fetchall()
+            actions = c.fetchall()
             
-            # Convert JSON fields
             for action in actions:
                 if action.get('parameters'):
                     action['parameters'] = json.loads(action['parameters'])
@@ -655,16 +617,15 @@ class ActionExecutor:
         Returns:
             Rollback result
         """
-        # Get action
         conn = self._get_connection()
         try:
             conn.row_factory = lambda cursor, row: {
                 col[0]: row[idx] for idx, col in enumerate(cursor.description)
             }
-            cursor = conn.cursor()
+            c = conn.cursor()
             
-            cursor.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
-            action = cursor.fetchone()
+            c.execute("SELECT * FROM actions WHERE action_id = ?", (action_id,))
+            action = c.fetchone()
             
             if not action:
                 return {"status": "error", "message": "Action not found"}
@@ -690,7 +651,6 @@ class ActionExecutor:
         finally:
             conn.close()
         
-        # Execute rollback based on action type
         try:
             if action_type == "rate_limit_ip":
                 result = self._rollback_rate_limit(action)
@@ -743,27 +703,25 @@ class ActionExecutor:
             }
     
     def _rollback_rate_limit(self, action: Dict) -> Dict:
-        """Rollback rate limit action"""
+        #Rollback rate limit action
         params = json.loads(action.get('parameters', '{}'))
         ip = params.get("ip", "unknown")
         
         if self.sandbox_mode:
             return {"message": f"Rate limit removed for {ip} (sandbox mode)"}
-        # In production, would remove rate limit
-        return {"message": f"Rate limit removed for {ip}"}
+        return {"message": f"Rate limit removed for {ip}"} # In production, would remove rate limit
     
     def _rollback_flag_account(self, action: Dict) -> Dict:
-        """Rollback flag account action"""
+        #Rollback flag account action
         params = json.loads(action.get('parameters', '{}'))
         user_id = params.get("user_id", "unknown")
         
         if self.sandbox_mode:
             return {"message": f"Flag removed from account {user_id} (sandbox mode)"}
-        # In production, would unflag account
-        return {"message": f"Flag removed from account {user_id}"}
+        return {"message": f"Flag removed from account {user_id}"}  # In production, would unflag account
     
     def _rollback_lock_account(self, action: Dict) -> Dict:
-        """Rollback lock account action"""
+        #Rollback lock account action
         params = json.loads(action.get('parameters', '{}'))
         user_id = params.get("user_id", "unknown")
         
@@ -773,35 +731,34 @@ class ActionExecutor:
         return {"message": f"Account {user_id} unlocked"}
     
     def _rollback_block_ip(self, action: Dict) -> Dict:
-        """Rollback block IP action"""
+        #Rollback block IP action
         params = json.loads(action.get('parameters', '{}'))
         ip = params.get("ip", "unknown")
         
         if self.sandbox_mode:
             return {"message": f"IP {ip} unblocked (sandbox mode)"}
-        # In production, would unblock IP
-        return {"message": f"IP {ip} unblocked"}
+        
+        return {"message": f"IP {ip} unblocked"} # In production, would unblock IP
     
     def _rollback_auth_check(self, action: Dict) -> Dict:
-        """Rollback auth check action"""
+        #Rollback auth check action
         if self.sandbox_mode:
             return {"message": "Additional auth checks disabled (sandbox mode)"}
-        # In production, would disable auth checks
-        return {"message": "Additional auth checks disabled"}
+        
+        return {"message": "Additional auth checks disabled"} # In production, would disable auth checks
     
     def _rollback_monitoring(self, action: Dict) -> Dict:
-        """Rollback monitoring increase"""
+        #Rollback monitoring increase
         params = json.loads(action.get('parameters', '{}'))
         target = params.get("source_ip", "unknown")
         
         if self.sandbox_mode:
             return {"message": f"Monitoring restored to normal for {target} (sandbox mode)"}
-        # In production, would restore monitoring
-        return {"message": f"Monitoring restored to normal for {target}"}
+        return {"message": f"Monitoring restored to normal for {target}"} # In production, would restore monitoring
 
 
 if __name__ == "__main__":
-    """Test the Action Executor"""
+    #Test the Action Executor
     print("Testing Action Executor...")
     
     executor = ActionExecutor(sandbox_mode=True)

@@ -53,7 +53,7 @@ class ThreatIntelligenceAgent:
     def __init__(
         self,
         rag: Optional[ThreatIntelligenceRAG] = None,
-        llm_model: str = "gpt-4o-mini",
+        llm_model: str = "gpt-5-nano",
         temperature: float = 0.3,
         use_llm: bool = True
     ):

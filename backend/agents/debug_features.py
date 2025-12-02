@@ -15,7 +15,7 @@ extreme_log = {
     'Dst IP': '10.0.0.1',
     'Destination Port': 9999,
     'Protocol': 'TCP',
-    'Total Length of Fwd Packets': 999999999,  # 999 MB!
+    'Total Length of Fwd Packets': 999999999,  
     'Total Length of Bwd Packets': 1,
     'Flow Duration': 0.001,
     'Flow Start': '2025-01-15 03:00:00'
@@ -38,7 +38,6 @@ agent = LogAnalyzerAgent()
 preprocessor = LogPreprocessor()
 
 print(" Feature Extraction Debug\n")
-print("="*60)
 
 for label, raw_log in [("NORMAL", normal_log), ("EXTREME ANOMALY", extreme_log)]:
     print(f"\n{label}:")

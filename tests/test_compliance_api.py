@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Quick test script for Compliance Reporting API
 Run this after starting the backend server
@@ -14,7 +13,6 @@ def test_compliance_api():
     base_url = "http://localhost:8000"
     endpoint = f"{base_url}/api/v1/compliance/reports"
     
-    # Calculate date range (last 30 days)
     end_date = datetime.now()
     start_date = end_date - timedelta(days=30)
     
@@ -24,9 +22,7 @@ def test_compliance_api():
         "period_end": end_date.strftime("%Y-%m-%d")
     }
     
-    print("=" * 60)
     print("Testing Compliance Reporting API")
-    print("=" * 60)
     print(f"\nEndpoint: {endpoint}")
     print(f"Payload: {json.dumps(payload, indent=2)}")
     print("\nSending request...")
@@ -47,7 +43,6 @@ def test_compliance_api():
             print(f"\n   First section: {data.get('sections', [{}])[0].get('title', 'N/A')}")
             print(f"\n   Full response saved to: compliance_test_response.json")
             
-            # Save full response
             with open('compliance_test_response.json', 'w') as f:
                 json.dump(data, f, indent=2)
             

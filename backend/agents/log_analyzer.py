@@ -13,7 +13,6 @@ from pathlib import Path
 import sys
 import os
 
-# Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils.preprocessor import LogPreprocessor
 
@@ -93,16 +92,9 @@ class LogAnalyzerAgent:
         Returns:
             Training statistics
         """
-        print(" Processing logs...")
         processed_logs = self.preprocessor.process_batch(raw_logs)
-        
-        print(" Extracting features...")
         features_df = self.extract_ml_features(processed_logs)
-        
-        print(" Scaling features...")
         features_scaled = self.scaler.fit_transform(features_df)
-        
-        print(" Training Isolation Forest...")
         self.model.fit(features_scaled)
         self.is_trained = True
         
@@ -112,8 +104,6 @@ class LogAnalyzerAgent:
             "model": "Isolation Forest",
             "contamination": self.model.contamination
         }
-        
-        print(f" Training complete! Model ready.")
         return stats
     
     def detect_anomalies(self, raw_logs: List[Dict]) -> Tuple[List[Dict], pd.DataFrame]:

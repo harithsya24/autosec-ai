@@ -227,3 +227,4 @@ class LogIngestionSimulator:
             "attack_logs": sum(1 for log in self.generated_logs if log.get("log", {}).get("Label") == "ATTACK")
         }
 
+

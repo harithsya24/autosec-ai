@@ -15,18 +15,14 @@ sys.path.append(str(Path(__file__).parent / "backend" / "api"))
 from backend.simulation.threat_simulator import ThreatSimulator, ThreatType
 
 async def test_callback(threat_result):
-    """Test callback function"""
-    print(f"\n=== CALLBACK TRIGGERED ===")
+    #Test callback function
     print(f"Threat Type: {threat_result.get('threat_analysis', {}).get('threat_type')}")
     print(f"Severity: {threat_result.get('anomaly', {}).get('severity')}")
     print(f"Confidence: {threat_result.get('threat_analysis', {}).get('confidence'):.2%}")
     print(f"Alert ID: {threat_result.get('alert_id', 'N/A')}")
-    print("========================\n")
 
 async def main():
     print("Testing Threat Simulator...")
-    
-    # Create simulator without orchestrator (will use template-based generation)
     simulator = ThreatSimulator(
         orchestrator=None,
         on_threat_detected=test_callback
@@ -36,18 +32,17 @@ async def main():
     result = await simulator.simulate_threat(ThreatType.BRUTE_FORCE)
     
     if result.get("threat_detected"):
-        print("✓ Threat generated successfully!")
+        print(" Threat generated successfully!")
         print(f"  - Type: {result.get('threat_analysis', {}).get('threat_type')}")
         print(f"  - Severity: {result.get('anomaly', {}).get('severity')}")
         print(f"  - Confidence: {result.get('threat_analysis', {}).get('confidence'):.2%}")
     else:
-        print("✗ Threat generation failed!")
+        print(" Threat generation failed!")
         return
     
     print("\n2. Testing demo mode (will run for 10 seconds)...")
-    await simulator.start_demo_mode(duration_minutes=0.17)  # ~10 seconds
+    await simulator.start_demo_mode(duration_minutes=0.17)  # 10 seconds
     
-    # Wait a bit to see threats
     await asyncio.sleep(12)
     
     await simulator.stop_simulation()
@@ -58,12 +53,13 @@ async def main():
     print(f"  - Is running: {simulator.is_running}")
     
     if len(simulator.generated_threats) > 0:
-        print("\n✓ Demo mode working!")
+        print("\n Demo mode working!")
     else:
-        print("\n✗ Demo mode did not generate threats")
+        print("\n Demo mode did not generate threats")
     
     print("\nTest complete!")
 
 if __name__ == "__main__":
     asyncio.run(main())
+
 

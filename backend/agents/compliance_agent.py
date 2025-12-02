@@ -1,6 +1,8 @@
 """
+
 Compliance Reporting Agent
 Generates automated compliance reports using LLM-powered analysis
+
 """
 
 import os
@@ -10,17 +12,14 @@ from typing import Dict, List, Any
 from pathlib import Path
 import json
 
-# Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-# Load environment variables from .env file
 try:
     from dotenv import load_dotenv
-    # Load .env from project root (3 levels up from backend/agents/)
     env_path = Path(__file__).parent.parent.parent / ".env"
     load_dotenv(env_path)
 except ImportError:
-    pass  # python-dotenv not installed, use system env vars only
+    pass  
 
 try:
     from langchain_openai import ChatOpenAI
@@ -31,14 +30,14 @@ except ImportError:
 
 
 class ComplianceAgent:
-    """Generates compliance reports for SOC2, GDPR, HIPAA, etc."""
+    """Generates compliance reports for SOC2, GDPR, HIPAA, Custom """
     
     def __init__(self):
         self.llm = None
         if LLM_AVAILABLE and os.getenv("OPENAI_API_KEY"):
             try:
                 self.llm = ChatOpenAI(
-                    model="gpt-4o-mini",  # Use same model as threat intelligence agent
+                    model="gpt-5-nano", 
                     temperature=0.3,
                 )
                 print("Compliance Agent: LLM initialized")
@@ -68,16 +67,13 @@ class ComplianceAgent:
         Returns:
             Compliance report dictionary
         """
-        # Get metrics from database
         metrics = await self._get_metrics(start_date, end_date)
         
-        # Generate report sections
         if self.llm:
             sections = await self._generate_with_llm(report_type, metrics, start_date, end_date)
         else:
             sections = self._generate_template(report_type, metrics, start_date, end_date)
         
-        # Create report
         report = {
             "report_id": f"report_{datetime.now().timestamp()}",
             "type": report_type,
@@ -92,7 +88,7 @@ class ComplianceAgent:
         return report
     
     async def _get_metrics(self, start_date: str, end_date: str) -> Dict[str, Any]:
-        """Get compliance metrics from database"""
+        #Get compliance metrics from database
         try:
             import sqlite3
             import sys
@@ -102,10 +98,10 @@ class ComplianceAgent:
             
             db = SecurityLogDatabase()
             conn = sqlite3.connect(db.db_path, timeout=10.0)
-            cursor = conn.cursor()
+            c = conn.cursor()
             
             # Get action metrics
-            cursor.execute('''
+            c.execute('''
                 SELECT 
                     COUNT(*) as total_actions,
                     SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as approved,
@@ -114,8 +110,7 @@ class ComplianceAgent:
                 WHERE executed_at >= ? AND executed_at <= ?
             ''', (start_date, end_date))
             
-            action_row = cursor.fetchone()
-            # Handle None values from database (SUM returns None if no rows)
+            action_row = c.fetchone()
             total_actions = (action_row[0] if action_row and action_row[0] is not None else 0) or 0
             approved = (action_row[1] if action_row and action_row[1] is not None else 0) or 0
             rejected = (action_row[2] if action_row and action_row[2] is not None else 0) or 0
@@ -150,7 +145,7 @@ class ComplianceAgent:
         start_date: str,
         end_date: str
     ) -> List[Dict[str, Any]]:
-        """Generate report sections using LLM"""
+        #Generate report sections using LLM
         
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """You are a compliance reporting expert. Generate detailed compliance report sections.
@@ -195,7 +190,6 @@ class ComplianceAgent:
             )
             response = await self.llm.ainvoke(messages)
             
-            # Parse LLM response
             if hasattr(response, 'content'):
                 content = response.content
             elif isinstance(response, str):
@@ -203,13 +197,11 @@ class ComplianceAgent:
             else:
                 content = str(response)
             
-            # Try to extract JSON from response
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0].strip()
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0].strip()
             
-            # Try to find JSON object in response
             import re
             json_match = re.search(r'\{.*"sections".*\}', content, re.DOTALL)
             if json_match:
@@ -235,7 +227,7 @@ class ComplianceAgent:
         start_date: str,
         end_date: str
     ) -> List[Dict[str, Any]]:
-        """Generate template-based report sections"""
+        #Generate template-based report sections
         
         sections = [
             {
