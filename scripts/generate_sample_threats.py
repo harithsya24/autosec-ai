@@ -34,7 +34,6 @@ def generate_sample_threats():
     except Exception as e:
         print(f"WARNING: Training error: {e}")
     
-    # Sample suspicious logs
     sample_logs = [
         {
             'timestamp': (datetime.now() - timedelta(minutes=5)).isoformat(),

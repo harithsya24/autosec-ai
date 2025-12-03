@@ -105,7 +105,6 @@ def download_cve_data():
 
 download_cve_data()
 
-# Summary
 print("\n Download Summary - REAL DATA ONLY")
 
 print("\n Successfully downloaded:")

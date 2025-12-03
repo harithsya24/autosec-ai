@@ -44,7 +44,7 @@ def convert_cicids_to_unified(cicids_row: dict) -> dict:
     
     # Create unified log format
     unified_log = {
-        'timestamp': datetime.now().isoformat(),  # Use current time for demo
+        'timestamp': datetime.now().isoformat(),  
         'source_ip': source_ip,
         'destination_ip': dest_ip,
         'user_id': f'user_{hash(source_ip) % 10000}',
@@ -55,7 +55,7 @@ def convert_cicids_to_unified(cicids_row: dict) -> dict:
         'port': dest_port,
         'bytes_sent': int(cicids_row.get('Total Length of Fwd Packets', 0)),
         'bytes_received': int(cicids_row.get('Total Length of Bwd Packets', 0)),
-        'duration': flow_duration / 1000000.0 if flow_duration > 0 else 0.0,  # Convert microseconds to seconds
+        'duration': flow_duration / 1000000.0 if flow_duration > 0 else 0.0,  
         'metadata': {
             'flow_duration': flow_duration,
             'total_packets': int(cicids_row.get('Total Fwd Packets', 0) + cicids_row.get('Total Backward Packets', 0)),
@@ -246,9 +246,7 @@ def process_real_attacks():
             traceback.print_exc()
     
     # Summary
-    print("\n" + "=" * 70)
     print("DETECTION SUMMARY")
-    print("=" * 70)
     print(f"Total threats detected: {total_threats}")
     print(f"Threats stored in database: {total_threats}")
     print(f"\nThreats by type:")
@@ -259,9 +257,8 @@ def process_real_attacks():
     print(f"   http://localhost:3000")
     print(f"\nAPI endpoint:")
     print(f"   GET http://localhost:8000/api/v1/threats")
-    print("\n" + "=" * 70)
     print("Real threat detection complete!")
-    print("=" * 70)
+
 
 if __name__ == "__main__":
     process_real_attacks()

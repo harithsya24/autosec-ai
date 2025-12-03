@@ -7,7 +7,6 @@ Tests the complete agent pipeline end-to-end
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -146,7 +145,6 @@ def test_api_endpoints():
 def main():
     """Run all tests"""
     print(" AutoSec AI - System Test")
-    print("=" * 60)
     
     results = {
         "RAG System": test_rag_system(),
@@ -155,7 +153,6 @@ def main():
         "API Endpoints": test_api_endpoints()
     }
     
-    print("\n" + "=" * 60)
     print(" Test Results:")
     for test_name, passed in results.items():
         status = "PASS" if passed else "FAIL / SKIP"
