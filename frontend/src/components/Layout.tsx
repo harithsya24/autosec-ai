@@ -15,19 +15,15 @@ export default function Layout({ children }: LayoutProps) {
   const [wsConnected, setWsConnected] = useState(false)
 
   useEffect(() => {
-    // Connect WebSocket
     wsService.connect()
     setWsConnected(true)
 
-    // Listen for action updates
     const unsubscribe = wsService.on('action_approved', () => {
-      // Refresh pending count
       fetch('/api/v1/actions/pending')
         .then((res) => res.json())
         .then((data) => setPendingCount(data.count || 0))
     })
 
-    // Initial pending count
     fetch('/api/v1/actions/pending')
       .then((res) => res.json())
       .then((data) => setPendingCount(data.count || 0))

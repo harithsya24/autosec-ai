@@ -22,17 +22,13 @@ export default function Dashboard() {
   const threatsRef = useRef<Threat[]>([])
 
   useEffect(() => {
-    // Load initial data
     loadThreats()
     loadSystemStatus()
     loadStats()
 
-    // Set up WebSocket listeners
     const unsubscribeThreat = wsService.on('threat_detected', (event) => {
       const newThreat = event.data as Threat
-      // Mark as new for animation
       setNewThreatIds((prev) => new Set([...prev, newThreat.alert_id]))
-      // Remove animation class after 3 seconds
       setTimeout(() => {
         setNewThreatIds((prev) => {
           const next = new Set(prev)
@@ -42,7 +38,6 @@ export default function Dashboard() {
       }, 3000)
       
       setThreats((prev) => {
-        // Check if threat already exists (avoid duplicates)
         const exists = prev.some(t => t.alert_id === newThreat.alert_id)
         if (exists) return prev
         return [newThreat, ...prev]
@@ -54,7 +49,6 @@ export default function Dashboard() {
       updateStats()
     })
 
-    // Poll for updates every 30 seconds
     const interval = setInterval(() => {
       loadThreats()
       loadStats()
@@ -87,7 +81,6 @@ export default function Dashboard() {
 
   const loadStats = async () => {
     try {
-      // Calculate stats from threats
       const allThreats = await threatService.getAll(100)
       const highPriority = allThreats.filter(
         (t) => t.severity === 'high' || t.severity === 'critical'

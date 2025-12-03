@@ -42,7 +42,6 @@ export default function Analytics() {
   }
 
   const calculateStats = (threatData: Threat[]) => {
-    // By severity
     const severityCounts: Record<string, number> = {}
     threatData.forEach((t) => {
       severityCounts[t.severity] = (severityCounts[t.severity] || 0) + 1
@@ -52,7 +51,6 @@ export default function Analytics() {
       value,
     }))
 
-    // By type
     const typeCounts: Record<string, number> = {}
     threatData.forEach((t) => {
       typeCounts[t.threat_type] = (typeCounts[t.threat_type] || 0) + 1
@@ -62,10 +60,9 @@ export default function Analytics() {
       .slice(0, 10)
       .map(([name, value]) => ({ name, value }))
 
-    // Timeline (last 7 days)
     const timeline: Record<string, number> = {}
     const now = new Date()
-    for (let i = 6; i >= 0; i--) {
+    for (let i = 4; i >= 0; i--) {
       const date = new Date(now)
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
@@ -81,8 +78,7 @@ export default function Analytics() {
       date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       count,
     }))
-
-    // Confidence distribution
+    
     const confidenceRanges = [
       { range: '0-50%', min: 0, max: 0.5 },
       { range: '50-70%', min: 0.5, max: 0.7 },

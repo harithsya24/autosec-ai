@@ -24,7 +24,7 @@ export default function SimulationControls() {
 
   useEffect(() => {
     loadStatus()
-    const interval = setInterval(loadStatus, 2000) // Poll every 2 seconds
+    const interval = setInterval(loadStatus, 2000) 
     return () => clearInterval(interval)
   }, [])
 

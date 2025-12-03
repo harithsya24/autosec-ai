@@ -14,7 +14,6 @@ export default function Actions() {
   useEffect(() => {
     loadData()
 
-    // Listen for action updates
     const unsubscribe = wsService.on('action_approved', () => {
       loadData()
     })
@@ -31,7 +30,6 @@ export default function Actions() {
         actionService.getPending(),
         actionService.getHistory(50),
       ])
-      // threat_context is now extracted in the API
       const enrichedPending = pending
       const enrichedHistory = history
       setPendingActions(enrichedPending)
