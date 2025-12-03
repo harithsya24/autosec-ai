@@ -15,10 +15,8 @@ class ThreatIntelligenceRAG:
         self.persist_dir = persist_dir
         os.makedirs(persist_dir, exist_ok=True)
         
-        # Initialize persistent ChromaDB client
         self.client = chromadb.PersistentClient(path=persist_dir)
         
-        # Create collections
         self.threat_collection = self.client.get_or_create_collection(
             name="threat_intelligence",
             metadata={"description": "MITRE ATT&CK techniques and tactics"}
@@ -37,7 +35,6 @@ class ThreatIntelligenceRAG:
         for doc in documents:
             doc_id = doc.get("id", f"mitre_{datetime.now().timestamp()}")
             
-            # Combine text fields for embedding
             text_content = f"""
             Title: {doc.get('title', '')}
             Description: {doc.get('description', '')}
@@ -229,7 +226,6 @@ if __name__ == "__main__":
     # Initialize RAG system
     rag = ThreatIntelligenceRAG()
     
-    # Add sample documents
     threat_docs = create_sample_threat_documents()
     cve_docs = create_sample_cve_documents()
     incident_docs = create_sample_incident_reports()
