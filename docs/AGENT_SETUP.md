@@ -225,7 +225,7 @@ In `threat_intelligence_agent.py`:
 ```python
 agent = ThreatIntelligenceAgent(
     rag=rag,
-    llm_model="gpt-4o-mini",  # or "gpt-4", "gpt-3.5-turbo"
+    llm_model="gpt-4o-mini", 
     temperature=0.3,  # Lower = more deterministic
     use_llm=True  # Set False to disable LLM (RAG only)
 )
