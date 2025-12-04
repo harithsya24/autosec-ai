@@ -8,7 +8,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -45,17 +44,14 @@ class TestWeek1:
         try:
             from backend.utils.data_loader import CICIDSLoader, MITRELoader, CVELoader
             
-            # Test CICIDS loader
             print("  Testing CICIDS loader...")
             cicids_loader = CICIDSLoader()
             
-            # Check if data directory exists
             data_dir = Path("data/raw/cicids")
             if not data_dir.exists():
                 self.test_result("CICIDS Data Directory", False, "Directory not found")
                 return False
             
-            # Try to load a file
             csv_files = list(data_dir.glob("*.csv"))
             if csv_files:
                 try:
@@ -66,7 +62,6 @@ class TestWeek1:
             else:
                 self.test_result("CICIDS Data Files", False, "No CSV files found")
             
-            # Test MITRE loader
             print("  Testing MITRE loader...")
             mitre_loader = MITRELoader()
             try:
@@ -75,7 +70,6 @@ class TestWeek1:
             except Exception as e:
                 self.test_result("MITRE Loader", False, f"Error: {e}")
             
-            # Test CVE loader
             print("  Testing CVE loader...")
             cve_loader = CVELoader()
             try:
@@ -100,7 +94,6 @@ class TestWeek1:
             
             preprocessor = LogPreprocessor()
             
-            # Test anonymization
             print("  Testing PII anonymization...")
             test_log = {
                 "source_ip": "192.168.1.100",
@@ -113,7 +106,6 @@ class TestWeek1:
             
             anonymized = preprocessor.anonymize_pii(test_log)
             
-            # Check if IPs are anonymized
             ip_anon = anonymized["source_ip"] != test_log["source_ip"]
             user_anon = anonymized["user_id"] != test_log["user_id"]
             
@@ -122,7 +114,6 @@ class TestWeek1:
             self.test_result("User Anonymization", user_anon,
                            f"Original: {test_log['user_id']} -> Anonymized: {anonymized['user_id']}")
             
-            # Test normalization
             print("  Testing log normalization...")
             cicids_log = {
                 "Src IP": "192.168.1.100",
@@ -142,7 +133,6 @@ class TestWeek1:
             self.test_result("Log Normalization", has_required_fields,
                            f"Normalized fields: {list(normalized.keys())[:5]}...")
             
-            # Test feature extraction
             print("  Testing feature extraction...")
             processed = preprocessor.process_log(cicids_log)
             has_features = "features" in processed
@@ -165,10 +155,8 @@ class TestWeek1:
         try:
             from backend.utils.database import SecurityLogDatabase
             
-            # Use test database
             db = SecurityLogDatabase(db_path="data/test_week1.db")
             
-            # Test log insertion
             print("  Testing log insertion...")
             test_log = {
                 "timestamp": datetime.now(),
@@ -189,20 +177,17 @@ class TestWeek1:
             log_id = db.insert_log(test_log)
             self.test_result("Log Insertion", log_id > 0, f"Inserted log with ID: {log_id}")
             
-            # Test alert insertion
             print("  Testing alert insertion...")
             alert_id = db.insert_alert(
                 log_id, "TEST_ALERT", "medium", "Test alert", "Test threat"
             )
             self.test_result("Alert Insertion", alert_id > 0, f"Inserted alert with ID: {alert_id}")
             
-            # Test retrieval
             print("  Testing log retrieval...")
             recent_logs = db.get_recent_logs(limit=5)
             self.test_result("Log Retrieval", len(recent_logs) > 0, 
                            f"Retrieved {len(recent_logs)} logs")
             
-            # Test statistics
             print("  Testing statistics...")
             stats = db.get_statistics()
             has_stats = "total_logs" in stats and "total_alerts" in stats
@@ -230,15 +215,12 @@ class TestWeek1:
                 create_sample_incident_reports
             )
             
-            # Initialize RAG
             print("  Initializing RAG system...")
             rag = ThreatIntelligenceRAG(persist_dir="data/test_vector_store_week1")
             
-            # Check current stats
             stats = rag.get_collection_stats()
             print(f"  Current stats: {stats}")
             
-            # Load sample data if needed
             if stats['threats'] == 0:
                 print("  Loading sample threat intelligence...")
                 threat_docs = create_sample_threat_documents()
@@ -261,7 +243,6 @@ class TestWeek1:
             else:
                 self.test_result("Incident Documents", True, f"Already loaded: {stats['incidents']} documents")
             
-            # Test retrieval
             print("  Testing RAG retrieval...")
             test_query = "multiple failed login attempts"
             threat_results = rag.search_threats(test_query, n_results=3)
@@ -272,7 +253,6 @@ class TestWeek1:
             self.test_result("CVE Retrieval", len(cve_results) >= 0,
                            f"Retrieved {len(cve_results)} CVE matches")
             
-            # Final stats
             final_stats = rag.get_collection_stats()
             self.test_result("RAG System", True,
                            f"Final: {final_stats['threats']} threats, "
@@ -341,22 +321,16 @@ class TestWeek1:
     
     def run_all_tests(self):
         """Run all Week 1 tests"""
-        print("="*60)
         print("WEEK 1 FOUNDATION TESTS")
-        print("="*60)
         print("\nTesting: Data Pipeline, RAG, Database, Schema")
         
-        # Run tests
         self.test_data_loaders()
         self.test_log_preprocessor()
         self.test_database()
         self.test_rag_system()
         self.test_log_schema()
         
-        # Print summary
-        print("\n" + "="*60)
         print("WEEK 1 TEST SUMMARY")
-        print("="*60)
         
         for test_name, passed, message in self.test_results:
             status = "PASS" if passed else "FAIL"

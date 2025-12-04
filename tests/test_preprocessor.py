@@ -1,10 +1,8 @@
 import pandas as pd
 from backend.utils.preprocessor import LogPreprocessor
 
-# Initialize preprocessor
 preprocessor = LogPreprocessor()
 
-# Path to your raw CICIDS CSV files
 cicids_files = [
     "data/raw/cicids/Friday-WorkingHours-Afternoon-DDos-pcap_ISCX.csv",
     "data/raw/cicids/Friday-WorkingHours-Afternoon-PortScan-pcap_ISCX.csv",
@@ -16,7 +14,7 @@ cicids_files = [
     "data/raw/cicids/Wednesday-workingHours-pcap_ISCX.csv"
 ]
 
-# Load and combine all logs
+
 all_logs = []
 for file in cicids_files:
     df = pd.read_csv(file)
@@ -25,7 +23,6 @@ for file in cicids_files:
 # Process logs
 processed_logs = preprocessor.process_batch(all_logs)
 
-# Print first 5 processed logs for verification
 for i, log in enumerate(processed_logs[:5], 1):
     print(f"--- Log {i} ---")
     print(f"User ID (hashed): {log.get('user_id')}")

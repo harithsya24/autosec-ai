@@ -9,7 +9,6 @@ from datetime import datetime
 import sys
 import os
 
-# Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -39,7 +38,6 @@ class TestLogPreprocessing:
         
         processed = preprocessor.process_log(raw_log)
         
-        # Verify anonymization
         assert processed['source_ip'] != '192.168.1.100'
         assert processed['user_id'] != 'john.doe'
         assert processed['user_id'].startswith('USER_')
@@ -81,7 +79,7 @@ class TestLogPreprocessing:
         
         preprocessor = LogPreprocessor()
         raw_log = {
-            'timestamp': '2024-01-15 02:15:45',  # Off-hours
+            'timestamp': '2024-01-15 02:15:45', 
             'source_ip': '192.168.1.100',
             'dest_ip': '10.0.0.5',
             'user_id': 'user1',
@@ -92,7 +90,7 @@ class TestLogPreprocessing:
             'port': 443,
             'bytes_sent': 100,
             'bytes_received': 200,
-            'duration': 350  # Long duration
+            'duration': 350 
         }
         
         processed = preprocessor.process_log(raw_log)
@@ -239,14 +237,12 @@ class TestStreamProcessor:
         
         stream.start()
         
-        # Submit logs
         logs = create_sample_logs()
         for log in logs:
             stream.submit_log(log)
         
-        time.sleep(2)  # Wait for processing
+        time.sleep(2)  
         
-        # Verify processing
         stats = stream.get_stats()
         assert stats['processed'] >= len(logs)
         
@@ -271,32 +267,26 @@ class TestIntegration:
         
         print("\n Running complete workflow test...")
         
-        # Initialize components
         db = SecurityLogDatabase(db_path="data/test_logs.db")
         preprocessor = LogPreprocessor()
         stream = StreamProcessor(db, preprocessor)
         rag = ThreatIntelligenceRAG(persist_dir="data/test_vector_store")
         
-        # Load threat intelligence
         threat_docs = create_sample_threat_documents()
         rag.add_threat_documents(threat_docs)
         
-        # Start streaming
         stream.start()
         
-        # Ingest logs
         logs = create_sample_logs()
         for log in logs:
             stream.submit_log(log)
         
         time.sleep(2)
         
-        # Verify all components
         stream_stats = stream.get_stats()
         db_stats = db.get_statistics()
         rag_stats = rag.get_collection_stats()
         
-        # Assertions
         assert stream_stats['processed'] > 0, "Logs not processed"
         assert db_stats['total_logs'] > 0, "Logs not stored"
         assert rag_stats['threats'] > 0, "Threats not indexed"

@@ -8,7 +8,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -30,10 +29,8 @@ class TestWeek3Integration:
         """Set up test environment"""
         print("Setting up test environment...")
         
-        # Initialize orchestrator
         self.orchestrator = OrchestratorAgent(sandbox_mode=True)
         
-        # Train log analyzer if not trained
         if not self.orchestrator.log_analyzer.is_trained:
             print("  Training log analyzer...")
             loader = CICIDSLoader()
@@ -53,7 +50,6 @@ class TestWeek3Integration:
         print("Test 1: Green Action Execution")
         
         try:
-            # Create a suspicious log
             test_log = {
                 "Flow Duration": 120.5,
                 "Total Fwd Packets": 150,
@@ -75,11 +71,8 @@ class TestWeek3Integration:
                 "Average Packet Size": 750,
                 "Label": "BENIGN"
             }
-            
-            # Analyze log
             result = self.orchestrator.analyze_log(test_log, return_full_analysis=False)
             
-            # Check if actions were executed
             executed = result.get("executed_actions", [])
             
             if executed:
@@ -97,7 +90,7 @@ class TestWeek3Integration:
                     print("  WARNING: Threat detected but no actions executed")
                 else:
                     print("  INFO: No threat detected (expected for benign log)")
-                self.test_results.append(("Green Action Execution", True))  # Not a failure
+                self.test_results.append(("Green Action Execution", True))  
                 return True
                 
         except Exception as e:
@@ -112,7 +105,6 @@ class TestWeek3Integration:
         try:
             executor = self.orchestrator.action_executor
             
-            # Create a red action
             red_action = {
                 "id": f"test_red_{datetime.now().timestamp()}",
                 "type": "lock_account",
@@ -123,20 +115,17 @@ class TestWeek3Integration:
                 "parameters": {"user_id": "test_user_123"}
             }
             
-            # Execute action (should queue)
             result = executor.execute_action(red_action)
             
             if result.get("status") == ActionStatus.PENDING:
                 print("  PASS: Red action queued for approval")
                 
-                # Check pending actions
                 pending = executor.get_pending_actions()
                 action_ids = [a["action_id"] for a in pending]
                 
                 if red_action["id"] in action_ids:
                     print("  PASS: Red action appears in pending list")
                     
-                    # Test approval
                     approval_result = executor.approve_action(
                         red_action["id"],
                         "test_approver",
@@ -174,7 +163,6 @@ class TestWeek3Integration:
         try:
             executor = self.orchestrator.action_executor
             
-            # Create a rollbackable action (yellow tier)
             yellow_action = {
                 "id": f"test_rollback_{datetime.now().timestamp()}",
                 "type": "rate_limit_ip",
@@ -185,13 +173,11 @@ class TestWeek3Integration:
                 "parameters": {"ip": "203.45.67.89"}
             }
             
-            # Execute action
             result = executor.execute_action(yellow_action)
             
             if result.get("status") == ActionStatus.COMPLETED:
                 print("  PASS: Action executed successfully")
                 
-                # Rollback action
                 rollback_result = executor.rollback_action(
                     yellow_action["id"],
                     "Test rollback"
@@ -208,7 +194,7 @@ class TestWeek3Integration:
                     return False
             else:
                 print(f"  WARNING: Action not completed, status: {result.get('status')}")
-                self.test_results.append(("Action Rollback", True))  # Not a failure
+                self.test_results.append(("Action Rollback", True))  
                 return True
                 
         except Exception as e:
@@ -225,7 +211,6 @@ class TestWeek3Integration:
         try:
             executor = self.orchestrator.action_executor
             
-            # Execute a few actions
             for i in range(3):
                 action = {
                     "id": f"test_history_{i}_{datetime.now().timestamp()}",
@@ -236,13 +221,11 @@ class TestWeek3Integration:
                 }
                 executor.execute_action(action)
             
-            # Get history
             history = executor.get_action_history(limit=10)
             
             if len(history) > 0:
                 print(f"  PASS: Action history retrieved ({len(history)} actions)")
                 
-                # Check if our test actions are in history
                 test_actions = [a for a in history if "test_history" in a.get("action_id", "")]
                 if len(test_actions) >= 3:
                     print("  PASS: Test actions found in history")
@@ -250,7 +233,7 @@ class TestWeek3Integration:
                     return True
                 else:
                     print(f"  WARNING: Only {len(test_actions)}/3 test actions found")
-                    self.test_results.append(("Action History", True))  # Partial success
+                    self.test_results.append(("Action History", True))  
                     return True
             else:
                 print("  WARNING: No action history found")
@@ -267,23 +250,20 @@ class TestWeek3Integration:
         print("\nTest 5: Enhanced Confidence Scoring")
         
         try:
-            # Create anomaly with high anomaly score
             anomaly = {
                 "action": "login",
                 "status": "failed",
                 "severity": "high",
-                "anomaly_score": -0.85,  # Strong anomaly
+                "anomaly_score": -0.85,  
                 "features": {
                     "failed_action": True,
                     "is_off_hours": True
                 }
             }
             
-            # Analyze threat
             analysis = self.orchestrator.threat_intel.analyze_threat(anomaly)
             confidence = analysis.get("confidence", 0.0)
             
-            # Enhanced confidence should be higher with strong anomaly score
             if confidence > 0.5:
                 print(f"  PASS: Enhanced confidence calculated: {confidence:.2%}")
                 print("  PASS: Confidence considers anomaly score strength")
@@ -291,7 +271,7 @@ class TestWeek3Integration:
                 return True
             else:
                 print(f"  WARNING: Confidence seems low: {confidence:.2%}")
-                self.test_results.append(("Enhanced Confidence", True))  # Still passes
+                self.test_results.append(("Enhanced Confidence", True))  
                 return True
                 
         except Exception as e:
@@ -304,41 +284,35 @@ class TestWeek3Integration:
         print("\nTest 6: End-to-End Workflow")
         
         try:
-            # Create highly suspicious log that should trigger detection
-            # Use extreme values that will definitely be flagged
             test_log = {
-                "Flow Duration": 0.001,  # Extremely short
-                "Total Fwd Packets": 10000,  # Very high
-                "Total Backward Packets": 1,  # Very low (suspicious ratio)
-                "Flow Bytes/s": 100000000,  # Extremely high
-                "Flow Packets/s": 10000,  # Very high
+                "Flow Duration": 0.001,  
+                "Total Fwd Packets": 10000,  
+                "Total Backward Packets": 1,  
+                "Flow Bytes/s": 100000000,  
+                "Flow Packets/s": 10000,  
                 "Destination Port": 22,
-                "Fwd Packet Length Mean": 10000,  # Very large
-                "Bwd Packet Length Mean": 10,  # Very small
-                "Flow IAT Mean": 0.0001,  # Extremely fast
+                "Fwd Packet Length Mean": 10000,  
+                "Bwd Packet Length Mean": 10,  
+                "Flow IAT Mean": 0.0001,  
                 "Fwd IAT Mean": 0.0001,
                 "Bwd IAT Mean": 0.0001,
                 "Fwd PSH Flags": 0,
                 "Bwd PSH Flags": 0,
                 "FIN Flag Count": 0,
-                "SYN Flag Count": 1000,  # Many SYN flags
+                "SYN Flag Count": 1000,  
                 "RST Flag Count": 0,
                 "ACK Flag Count": 0,
                 "Average Packet Size": 10000,
-                "Label": "BENIGN"  # Labeled benign but very suspicious
+                "Label": "BENIGN"  
             }
             
-            # Run complete analysis
             result = self.orchestrator.analyze_log(test_log, return_full_analysis=True)
             
-            # Check if threat was detected
             threat_detected = result.get("threat_detected", False)
             
             if not threat_detected:
-                # If no threat detected, that's okay - test the structure anyway
                 print("  INFO: No threat detected with test log")
                 print("  PASS: Workflow structure is correct")
-                # Check that the response has the expected structure
                 has_status = "status" in result
                 has_analyzed_at = "analyzed_at" in result
                 if has_status and has_analyzed_at:
@@ -348,7 +322,6 @@ class TestWeek3Integration:
                     self.test_results.append(("End-to-End Workflow", False))
                     return False
             
-            # If threat detected, check all components
             checks = {
                 "Threat Detected": threat_detected,
                 "Threat Analysis": "threat_analysis" in result,
@@ -371,12 +344,9 @@ class TestWeek3Integration:
                 self.test_results.append(("End-to-End Workflow", True))
                 return True
             else:
-                # Debug: print what we got
                 print(f"  Debug - Result keys: {list(result.keys())}")
                 print(f"  Debug - Threat detected value: {threat_detected}")
                 
-                # Check if basic workflow is functional
-                # Even if some fields are missing, if threat was detected and we have status, it's working
                 basic_working = (
                     result.get("threat_detected") is not None and
                     "status" in result and
@@ -402,14 +372,11 @@ class TestWeek3Integration:
     
     def run_all_tests(self):
         """Run all integration tests"""
-        print("=" * 60)
         print("WEEK 3 ACTION EXECUTION TESTS")
-        print("=" * 60)
         print("\nTesting: Action Execution, Approval Workflow, Rollback, History")
         
         self.setup()
         
-        # Run tests
         self.test_green_action_execution()
         self.test_red_action_approval()
         self.test_action_rollback()
@@ -417,10 +384,7 @@ class TestWeek3Integration:
         self.test_enhanced_confidence()
         self.test_end_to_end_workflow()
         
-        # Print summary
-        print("\n" + "=" * 60)
         print("WEEK 3 TEST SUMMARY")
-        print("=" * 60)
         
         passed = sum(1 for _, result in self.test_results if result)
         total = len(self.test_results)

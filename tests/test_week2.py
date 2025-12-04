@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
@@ -46,12 +45,10 @@ class TestWeek2:
             from backend.agents.log_analyzer import LogAnalyzerAgent
             from backend.utils.data_loader import CICIDSLoader
             
-            # Initialize agent
             print("  Initializing Log Analyzer...")
             agent = LogAnalyzerAgent(contamination=0.10)
             self.test_result("Agent Initialization", True, "LogAnalyzerAgent created")
             
-            # Load training data
             print("  Loading training data...")
             loader = CICIDSLoader()
             try:
@@ -62,7 +59,6 @@ class TestWeek2:
                 self.test_result("Data Loading", False, f"Error: {e}")
                 return False
             
-            # Train agent
             print("  Training agent on benign traffic...")
             try:
                 stats = agent.train_on_benign_only(logs)
@@ -73,9 +69,8 @@ class TestWeek2:
                 self.test_result("Agent Training", False, f"Error: {e}")
                 return False
             
-            # Test anomaly detection
             print("  Testing anomaly detection...")
-            test_logs = logs[:10]  # Test on first 10 logs
+            test_logs = logs[:10]  
             try:
                 anomalies, results_df = agent.detect_anomalies(test_logs)
                 detection_works = isinstance(anomalies, list) and isinstance(results_df, type(df))
@@ -85,7 +80,6 @@ class TestWeek2:
                 self.test_result("Anomaly Detection", False, f"Error: {e}")
                 return False
             
-            # Test severity classification
             if anomalies:
                 severities = [a.get('severity') for a in anomalies]
                 has_severity = all(s in ['low', 'medium', 'high', 'critical'] for s in severities)
@@ -113,11 +107,9 @@ class TestWeek2:
                 create_sample_incident_reports
             )
             
-            # Initialize RAG
             print("  Initializing RAG...")
             rag = ThreatIntelligenceRAG(persist_dir="data/test_vector_store_week2")
             
-            # Load sample data if needed
             stats = rag.get_collection_stats()
             if stats['threats'] == 0:
                 print("  Loading sample data...")
@@ -127,12 +119,10 @@ class TestWeek2:
             
             self.test_result("RAG Initialization", True, "RAG system ready")
             
-            # Initialize agent (without LLM for testing)
             print("  Initializing Threat Intelligence Agent...")
             agent = ThreatIntelligenceAgent(rag=rag, use_llm=False)
             self.test_result("Agent Initialization", True, "ThreatIntelligenceAgent created")
             
-            # Test threat analysis
             print("  Testing threat analysis...")
             sample_anomaly = {
                 "action": "login",
@@ -159,13 +149,11 @@ class TestWeek2:
                                f"Threat type: {analysis.get('threat_type')}, "
                                f"Confidence: {analysis.get('confidence'):.2%}")
                 
-                # Test confidence scoring
                 confidence = analysis.get("confidence", 0.0)
                 valid_confidence = 0.0 <= confidence <= 1.0
                 self.test_result("Confidence Scoring", valid_confidence,
                                f"Confidence: {confidence:.2%}")
                 
-                # Test citations
                 citations = analysis.get("citations", [])
                 self.test_result("Citations", len(citations) >= 0,
                                f"Found {len(citations)} citations")
@@ -189,12 +177,10 @@ class TestWeek2:
         try:
             from backend.agents.response_agent import ResponseAgent, ActionTier
             
-            # Initialize agent
             print("  Initializing Response Agent...")
             agent = ResponseAgent(sandbox_mode=True)
             self.test_result("Agent Initialization", True, "ResponseAgent created")
             
-            # Test action recommendations
             print("  Testing action recommendations...")
             threat_analysis = {
                 "threat_type": "credential_stuffing",
@@ -223,7 +209,6 @@ class TestWeek2:
                 self.test_result("Action Recommendations", has_actions and has_summary,
                                "Recommendations generated")
                 
-                # Check traffic light system
                 actions = recommendations.get("actions", {})
                 has_green = "green" in actions
                 has_yellow = "yellow" in actions
@@ -234,7 +219,6 @@ class TestWeek2:
                                f"Yellow: {len(actions.get('yellow', []))}, "
                                f"Red: {len(actions.get('red', []))}")
                 
-                # Check action tiers
                 if actions.get("green"):
                     green_action = actions["green"][0]
                     is_green = green_action.get("tier") == ActionTier.GREEN
@@ -262,12 +246,10 @@ class TestWeek2:
             from backend.agents.log_analyzer import LogAnalyzerAgent
             from backend.utils.data_loader import CICIDSLoader
             
-            # Initialize orchestrator
             print("  Initializing Orchestrator...")
             orchestrator = OrchestratorAgent(sandbox_mode=True)
             self.test_result("Orchestrator Initialization", True, "OrchestratorAgent created")
             
-            # Train log analyzer if needed
             if not orchestrator.log_analyzer.is_trained:
                 print("  Training log analyzer...")
                 loader = CICIDSLoader()
@@ -280,7 +262,6 @@ class TestWeek2:
                     self.test_result("Log Analyzer Training", False, f"Error: {e}")
                     return False
             
-            # Test complete workflow
             print("  Testing complete workflow...")
             test_log = {
                 "Flow Duration": 120.5,
@@ -331,7 +312,6 @@ class TestWeek2:
                 traceback.print_exc()
                 return False
             
-            # Test system status
             print("  Testing system status...")
             status = orchestrator.get_system_status()
             has_status = "log_analyzer" in status and "threat_intelligence" in status
@@ -347,21 +327,15 @@ class TestWeek2:
     
     def run_all_tests(self):
         """Run all Week 2 tests"""
-        print("="*60)
         print("WEEK 2 AI AGENTS TESTS")
-        print("="*60)
         print("\nTesting: Detection, RAG Analysis, Recommendations, Orchestration")
         
-        # Run tests
         self.test_log_analyzer()
         self.test_threat_intelligence()
         self.test_response_agent()
         self.test_orchestrator()
         
-        # Print summary
-        print("\n" + "="*60)
         print("WEEK 2 TEST SUMMARY")
-        print("="*60)
         
         for test_name, passed, message in self.test_results:
             status = "PASS" if passed else "FAIL"
