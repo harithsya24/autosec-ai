@@ -33,24 +33,24 @@ AutoSec AI is an intelligent security orchestration system that uses specialized
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Frontend Dashboard                        │
-│              (React + WebSocket + Tailwind)                  │
+│                    Frontend Dashboard                       │
+│              (React + WebSocket + Tailwind)                 │
 └─────────────────────┬───────────────────────────────────────┘
                       │ WebSocket / REST API
 ┌─────────────────────▼───────────────────────────────────────┐
-│                   FastAPI Backend                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Log Analyzer │  │  Threat Intel │  │   Response   │      │
-│  │   (ML/IF)    │─▶│   (RAG/LLM)  │─▶│    (LLM)     │      │
-│  └──────────────┘  └──────────────┘  └──────┬───────┘      │
-│                                              │               │
-│  ┌──────────────────────────────────────────▼───────┐      │
-│  │          Action Executor (Sandbox)               │      │
-│  └──────────────────────────────────────────────────┘      │
+│                   FastAPI Backend                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │ Log Analyzer │  │  Threat Intel │  │   Response  │       │
+│  │   (ML/IF)    │─▶│   (RAG/LLM)  │─▶│    (LLM)     │       │
+│  └──────────────┘  └──────────────┘  └──────┬───────┘       │
+│                                              │              │
+│  ┌──────────────────────────────────────────▼───────┐       │
+│  │          Action Executor (Sandbox)               │       │
+│  └──────────────────────────────────────────────────┘       │
 └─────────────────────────────────────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────────────┐
-│         SQLite Database + Vector Store (ChromaDB)            │
+│         SQLite Database + Vector Store (ChromaDB)           │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -321,9 +321,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Contact
 
-- **Project Lead**: Your Name
-- **Email**: your.email@example.com
-- **Issues**: GitHub Issues
+- **Project Lead**: Amrutha Kanakatte Ravishankar
+- **Email**: akanakat@stevens.edu
 - **Discussions**: GitHub Discussions
 
 ## Disclaimer
